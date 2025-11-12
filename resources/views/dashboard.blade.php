@@ -1218,7 +1218,7 @@
         const inProgressIcon = createIcon('#3b82f6');
         const resolvedIcon = createIcon('#10b981');
 
-        // Sample report data (replace with actual data from your database)
+        // Sample report data (replace with actual data from your database) dahdahdaskd
         const sampleReports = [
             {
                 id: 1,
@@ -1248,7 +1248,7 @@
                 isMine: false
             }
         ];
-
+        const temp = 123;
         // Get disaster types and verified reports from database
         // `disasterTypes` is an array of objects like { id, name, icon, color, is_active }
         const disasterTypes = @json($disasterTypes);
