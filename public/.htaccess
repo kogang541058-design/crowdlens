@@ -11,6 +11,24 @@
     php_value max_execution_time 300
     php_value max_input_time 300
 
+    # Add proper MIME types for video files
+    <IfModule mod_mime.c>
+        AddType video/mp4 .mp4 .m4v
+        AddType video/webm .webm
+        AddType video/ogg .ogv .ogg
+        AddType video/quicktime .mov
+        AddType video/x-msvideo .avi
+        AddType video/x-matroska .mkv
+    </IfModule>
+
+    # Enable partial content for video streaming
+    <IfModule mod_headers.c>
+        <FilesMatch "\.(mp4|m4v|webm|ogv|ogg|mov|avi|mkv)$">
+            Header set Accept-Ranges bytes
+            Header set Connection keep-alive
+        </FilesMatch>
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

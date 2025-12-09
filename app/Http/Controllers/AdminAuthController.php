@@ -88,7 +88,10 @@ class AdminAuthController extends Controller
      */
     public function reports()
     {
-        $reports = \App\Models\Report::with(['user', 'solved', 'unsolved'])->orderBy('created_at', 'desc')->get();
+        $reports = \App\Models\Report::with(['user', 'solved', 'responses'])
+            ->whereIn('status', ['pending', 'verified', 'unverified'])
+            ->orderBy('created_at', 'desc')
+            ->get();
         $disasterTypes = \App\Models\DisasterType::where('is_active', true)->orderBy('name')->get();
         return view('admin.reports', compact('reports', 'disasterTypes'));
     }
@@ -114,13 +117,59 @@ class AdminAuthController extends Controller
     }
 
     /**
+     * Respond to a report and update its status.
+     */
+    public function respondToReport(Request $request, \App\Models\Report $report)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:pending,verified,unverified',
+            'action_type' => 'nullable|string',
+            'response_message' => 'required|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        // Save the response to report_responses table
+        $response = \App\Models\ReportResponse::create([
+            'report_id' => $report->id,
+            'admin_id' => auth('admin')->id(),
+            'status' => $validated['status'],
+            'action_type' => $validated['action_type'],
+            'response_message' => $validated['response_message'],
+            'notes' => $validated['notes'],
+        ]);
+
+        // Update report status
+        $report->update([
+            'status' => $validated['status'],
+        ]);
+
+        // Handle action type if provided
+        if (!empty($validated['action_type']) && $validated['action_type'] === 'solved') {
+            // Create or update solved entry
+            \App\Models\Solved::updateOrCreate(
+                ['report_id' => $report->id],
+                [
+                    'admin_id' => auth('admin')->id(),
+                    'solved_at' => now(),
+                ]
+            );
+        } elseif (!empty($validated['action_type']) && $validated['action_type'] === 'in_progress') {
+            // Remove from solved if exists (report is no longer solved if marked as in progress)
+            \App\Models\Solved::where('report_id', $report->id)->delete();
+        }
+
+        // Broadcast real-time notification to the user who submitted the report
+        \Log::info('Broadcasting AdminResponded event for report ID: ' . $report->id . ' to user ID: ' . $report->user_id);
+        broadcast(new \App\Events\AdminResponded($report->load(['user', 'responses.admin']), $response->load('admin'), $report->user_id))->toOthers();
+
+        return redirect()->back()->with('success', 'Response submitted successfully! Status updated to ' . $validated['status'] . '.');
+    }
+
+    /**
      * Mark report as solved.
      */
     public function markSolved(\App\Models\Report $report)
     {
-        // Remove from unsolved if exists
-        \App\Models\Unsolved::where('report_id', $report->id)->delete();
-        
         // Create or update solved entry
         \App\Models\Solved::updateOrCreate(
             ['report_id' => $report->id],
@@ -131,27 +180,6 @@ class AdminAuthController extends Controller
         );
         
         return redirect()->back()->with('success', 'Report marked as solved!');
-    }
-
-    /**
-     * Mark report as unsolved.
-     */
-    public function markUnsolved(\App\Models\Report $report)
-    {
-        // Remove from solved if exists
-        \App\Models\Solved::where('report_id', $report->id)->delete();
-        
-        // Create or update unsolved entry
-        \App\Models\Unsolved::updateOrCreate(
-            ['report_id' => $report->id],
-            [
-                'admin_id' => auth('admin')->id(),
-                'priority' => 'medium',
-                'pending_since' => now(),
-            ]
-        );
-        
-        return redirect()->back()->with('success', 'Report marked as unsolved!');
     }
 
     /**
@@ -167,9 +195,8 @@ class AdminAuthController extends Controller
             \Storage::disk('public')->delete($report->video);
         }
 
-        // Remove from solved/unsolved tables
+        // Remove from solved table
         \App\Models\Solved::where('report_id', $report->id)->delete();
-        \App\Models\Unsolved::where('report_id', $report->id)->delete();
 
         $report->delete();
         return redirect()->back()->with('success', 'Report deleted successfully!');
@@ -188,14 +215,174 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * Show unsolved reports page.
+     * Get total report count for real-time notifications.
      */
-    public function unsolved()
+    public function getReportCount()
     {
-        $unsolvedReports = \App\Models\Unsolved::with(['report.user', 'admin'])
-            ->orderBy('pending_since', 'desc')
-            ->get();
-        $disasterTypes = \App\Models\DisasterType::where('is_active', true)->get();
-        return view('admin.unsolved', compact('unsolvedReports', 'disasterTypes'));
+        $count = \App\Models\Report::whereIn('status', ['pending', 'verified', 'unverified'])->count();
+        return response()->json(['count' => $count]);
     }
+
+    /**
+     * Get new reports since last check for real-time updates.
+     */
+    public function getNewReports(Request $request)
+    {
+        $lastId = $request->query('last_id', 0);
+        
+        $newReports = \App\Models\Report::with(['user', 'solved', 'responses'])
+            ->where('id', '>', $lastId)
+            ->whereIn('status', ['pending', 'verified', 'unverified'])
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($report) {
+                // Determine action status
+                $actionStatus = '';
+                if ($report->solved) {
+                    $actionStatus = 'solved';
+                } elseif ($report->responses->where('action_type', 'in_progress')->count() > 0) {
+                    $actionStatus = 'in_progress';
+                }
+
+                return [
+                    'id' => $report->id,
+                    'user_name' => $report->user ? $report->user->name : 'N/A',
+                    'disaster_type' => $report->disaster_type,
+                    'disaster_type_name' => $report->disaster_type,
+                    'description' => $report->description,
+                    'location' => $report->location,
+                    'created_at' => $report->created_at->toIso8601String(),
+                    'status' => $report->status,
+                    'action_status' => $actionStatus,
+                    'image' => $report->image ? \Storage::url($report->image) : null,
+                    'video' => $report->video ? \Storage::url($report->video) : null,
+                ];
+            });
+
+        return response()->json(['reports' => $newReports]);
+    }
+
+    /**
+     * Check for new reports (polling fallback)
+     */
+    public function checkNewReports(Request $request)
+    {
+        $sinceId = $request->input('since', 0);
+        
+        $newReports = \App\Models\Report::where('id', '>', $sinceId)
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($report) {
+                // Check action status
+                $actionStatus = null;
+                if ($report->solved) {
+                    $actionStatus = 'solved';
+                } elseif ($report->responses()->where('action_type', 'in_progress')->exists()) {
+                    $actionStatus = 'in_progress';
+                }
+                
+                return [
+                    'id' => $report->id,
+                    'disaster_type' => $report->disaster_type,
+                    'disaster_type_name' => ucfirst($report->disaster_type),
+                    'description' => $report->description,
+                    'location' => $report->location ?? ($report->latitude . ', ' . $report->longitude),
+                    'latitude' => $report->latitude,
+                    'longitude' => $report->longitude,
+                    'user_name' => $report->user->name,
+                    'user_id' => $report->user_id,
+                    'status' => $report->status,
+                    'action_status' => $actionStatus,
+                    'image' => $report->image ? \Storage::url($report->image) : null,
+                    'video' => $report->video ? \Storage::url($report->video) : null,
+                    'created_at' => $report->created_at->toISOString(),
+                    'formatted_date' => $report->created_at->format('M d, Y'),
+                    'formatted_time' => $report->created_at->format('h:i A'),
+                ];
+            });
+
+        return response()->json(['new_reports' => $newReports]);
+    }
+
+    /**
+     * Get notifications for current admin
+     */
+    public function getNotifications(Request $request)
+    {
+        $adminId = auth('admin')->id();
+        $limit = $request->input('limit', 50);
+        
+        $notifications = \App\Models\Notification::where('admin_id', $adminId)
+            ->with(['report.user'])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($notification) {
+                $disasterType = 'N/A';
+                $userName = 'Unknown User';
+                
+                if ($notification->report) {
+                    $disasterType = ucfirst($notification->report->disaster_type);
+                    if ($notification->report->user) {
+                        $userName = $notification->report->user->name;
+                    }
+                }
+                
+                return [
+                    'id' => $notification->id,
+                    'report_id' => $notification->report_id,
+                    'disaster_type' => $disasterType,
+                    'user_name' => $userName,
+                    'message' => $notification->message,
+                    'is_read' => $notification->is_read,
+                    'time_ago' => $notification->time_ago,
+                    'created_at' => $notification->created_at->toISOString(),
+                ];
+            });
+
+        $unreadCount = \App\Models\Notification::where('admin_id', $adminId)
+            ->where('is_read', false)
+            ->count();
+
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => $unreadCount,
+        ]);
+    }
+
+    /**
+     * Mark notification as read
+     */
+    public function markNotificationRead($id)
+    {
+        $adminId = auth('admin')->id();
+        
+        $notification = \App\Models\Notification::where('id', $id)
+            ->where('admin_id', $adminId)
+            ->first();
+
+        if ($notification) {
+            $notification->update(['is_read' => true]);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false], 404);
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsRead()
+    {
+        $adminId = auth('admin')->id();
+        
+        \App\Models\Notification::where('admin_id', $adminId)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        return response()->json(['success' => true]);
+    }
+
 }
+

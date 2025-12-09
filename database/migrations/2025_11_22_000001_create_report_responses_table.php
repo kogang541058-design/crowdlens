@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('unsolved', function (Blueprint $table) {
+        Schema::create('report_responses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('report_id')->constrained()->onDelete('cascade');
-            $table->enum('priority', ['low', 'medium', 'high'])->default('medium');
+            $table->foreignId('admin_id')->constrained()->onDelete('cascade');
+            $table->string('status', 20); // pending, verified, unverified
+            $table->string('action_type')->nullable(); // solved, in_progress, needs_attention
+            $table->text('response_message');
             $table->text('notes')->nullable();
-            $table->timestamp('pending_since');
             $table->timestamps();
         });
     }
@@ -26,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('unsolved');
+        Schema::dropIfExists('report_responses');
     }
 };

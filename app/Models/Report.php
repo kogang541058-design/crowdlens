@@ -38,10 +38,10 @@ class Report extends Model
     }
 
     /**
-     * Get the unsolved record for this report.
+     * Get all responses for this report.
      */
-    public function unsolved()
+    public function responses()
     {
-        return $this->hasOne(Unsolved::class);
+        return $this->hasMany(ReportResponse::class);
     }
 }

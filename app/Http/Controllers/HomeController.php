@@ -41,8 +41,9 @@ class HomeController extends Controller
      */
     public function dashboard()
     {
-        // Get current user's reports
-        $reports = \App\Models\Report::where('user_id', auth()->id())
+        // Get current user's reports with relationships
+        $reports = \App\Models\Report::with(['solved', 'responses'])
+            ->where('user_id', auth()->id())
             ->latest()
             ->get();
         
@@ -58,5 +59,53 @@ class HomeController extends Controller
             ->get();
         
         return view('dashboard', compact('reports', 'verifiedReports', 'disasterTypes'));
+    }
+
+    /**
+     * Check for new admin responses on user's reports.
+     */
+    public function checkResponses(Request $request)
+    {
+        $userId = auth()->id();
+        $lastCheckTime = $request->session()->get('last_response_check_time', now()->subMinutes(5));
+        
+        // Get user's report IDs
+        $userReports = \App\Models\Report::where('user_id', $userId)->pluck('id');
+        
+        // Get total response count
+        $responseCount = \App\Models\ReportResponse::whereIn('report_id', $userReports)->count();
+        
+        // Check for new responses since last check
+        $newResponses = \App\Models\ReportResponse::with(['report', 'admin'])
+            ->whereIn('report_id', $userReports)
+            ->where('created_at', '>', $lastCheckTime)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        $hasNewResponse = $newResponses->count() > 0;
+        
+        // Update session with current time
+        if ($hasNewResponse) {
+            $request->session()->put('last_response_check_time', now());
+        }
+        
+        $latestResponse = null;
+        if ($hasNewResponse && $newResponses->first()) {
+            $response = $newResponses->first();
+            $latestResponse = [
+                'disaster_type' => $response->report->disaster_type ?? 'Report',
+                'response_message' => $response->response_message,
+                'action_type' => $response->action_type,
+                'responded_at' => $response->created_at->format('M d, Y h:i A'),
+                'admin_name' => $response->admin->name ?? 'Admin'
+            ];
+        }
+        
+        return response()->json([
+            'response_count' => $responseCount,
+            'has_new_response' => $hasNewResponse,
+            'latest_response' => $latestResponse,
+            'new_count' => $newResponses->count()
+        ]);
     }
 }
