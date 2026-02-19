@@ -309,6 +309,7 @@
             padding: 1rem;
             border-bottom: 1px solid #f1f5f9;
             color: #334155;
+            vertical-align: middle;
         }
 
         .reports-table tbody tr:hover {
@@ -780,6 +781,14 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.barangay') }}" class="nav-link">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Barangay
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.solved') }}" class="nav-link">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -850,7 +859,7 @@
             <table class="reports-table">
                 <thead>
                     <tr>
-                        <th>
+                        <th style="width: 150px; vertical-align: top;">
                             Type of Disaster
                             <br>
                             <select class="disaster-type-select" id="adminDisasterFilter" onchange="filterAdminReports()">
@@ -860,12 +869,12 @@
                                 @endforeach
                             </select>
                         </th>
-                        <th>Description</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Location</th>
-                        <th>
+                        <th style="width: 250px; vertical-align: top;">Description</th>
+                        <th style="width: 110px; vertical-align: top;">Date</th>
+                        <th style="width: 90px; vertical-align: top;">Time</th>
+                        <th style="width: 150px; vertical-align: top;">User</th>
+                        <th style="width: 200px; vertical-align: top;">Location</th>
+                        <th style="width: 140px; vertical-align: top;">
                             Status
                             <br>
                             <select class="disaster-type-select" id="statusFilter" onchange="filterAdminReports()">
@@ -875,13 +884,33 @@
                                 <option value="unverified">Unverified</option>
                             </select>
                         </th>
-                        <th>
+                        <th style="width: 140px; vertical-align: top;">
                             Action Status
                             <br>
                             <select class="disaster-type-select" id="actionStatusFilter" onchange="filterAdminReports()">
                                 <option value="">All</option>
                                 <option value="solved">Solved</option>
                                 <option value="in_progress">In Progress</option>
+                            </select>
+                        </th>
+                        <th style="width: 150px; vertical-align: top;">
+                            Barangay
+                            <br>
+                            <select class="disaster-type-select" id="barangayFilter" onchange="filterAdminReports()">
+                                <option value="">All</option>
+                                @foreach(\App\Models\Barangay::orderBy('name')->get() as $b)
+                                    <option value="{{ $b->id }}">{{ $b->name }}</option>
+                                @endforeach
+                            </select>
+                        </th>
+                        <th style="width: 150px; vertical-align: top;">
+                            Barangay Action
+                            <br>
+                            <select class="disaster-type-select" id="barangayActionFilter" onchange="filterAdminReports()">
+                                <option value="">All</option>
+                                <option value="approved">Approved</option>
+                                <option value="disapproved">Disapproved</option>
+                                <option value="none">No Action</option>
                             </select>
                         </th>
                         <th style="display: none;">Image</th>
@@ -897,6 +926,8 @@
                             data-disaster-type="{{ $report->disaster_type }}" 
                             data-status="{{ $report->status }}" 
                             data-action-status="{{ $report->solved ? 'solved' : ($report->responses()->where('action_type', 'in_progress')->exists() ? 'in_progress' : '') }}"
+                            data-barangay-id="{{ $report->barangay_id ?? '' }}"
+                            data-barangay-action="{{ $report->barangay_action_status ?? 'none' }}"
                             data-description="{{ $report->description }}"
                             data-user="{{ $report->user->name }}"
                             data-location="{{ $report->location ?: number_format($report->latitude, 6) . ', ' . number_format($report->longitude, 6) }}"
@@ -948,6 +979,28 @@
                                     <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
                                 @endif
                             </td>
+                            <td>
+                                @if($report->barangay)
+                                    <span style="background: #ede9fe; color: #5b21b6; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                                        {{ $report->barangay->name }}
+                                    </span>
+                                @else
+                                    <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($report->barangay_action_status === 'approved')
+                                    <span style="background: #d1fae5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                                        Approved
+                                    </span>
+                                @elseif($report->barangay_action_status === 'disapproved')
+                                    <span style="background: #fee2e2; color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                                        Disapproved
+                                    </span>
+                                @else
+                                    <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
+                                @endif
+                            </td>
                             <td style="display: none;">
                                 @if($report->image)
                                     <a href="javascript:void(0)" class="view-link view-media" data-url="{{ Storage::url($report->image) }}" data-type="image" onclick="event.stopPropagation()">View</a>
@@ -971,7 +1024,7 @@
                         @endforeach
                     @else
                         <tr>
-                            <td colspan="8">
+                                <td colspan="10">
                                 <div class="empty-state">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -1021,6 +1074,7 @@
             <form id="respondForm" method="POST" style="display: flex; flex-direction: column; gap: 1rem;">
                 @csrf
                 <input type="hidden" name="status" id="hiddenStatus">
+                <input type="hidden" name="report_id" id="hiddenReportId">
                 
                 <div>
                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Status *</label>
@@ -1116,14 +1170,16 @@
             const form = document.getElementById('respondForm');
             const statusSelect = document.getElementById('statusSelect');
             const hiddenStatus = document.getElementById('hiddenStatus');
+            const hiddenReportId = document.getElementById('hiddenReportId');
             
             // Update report details
             document.getElementById('modalDisasterType').textContent = disasterType;
             document.getElementById('modalDescription').textContent = description;
             document.getElementById('modalLocation').textContent = location;
             
-            // Update form action
+            // Update form action and hidden report ID
             form.action = `/admin/reports/${reportId}/respond`;
+            hiddenReportId.value = reportId;
             
             // Handle status field based on current status
             if (currentStatus === 'verified' || currentStatus === 'unverified') {
@@ -1249,6 +1305,8 @@
                     
                     const formData = new FormData(this);
                     const actionUrl = this.action;
+                    const actionType = formData.get('action_type');
+                    const reportId = formData.get('report_id');
                     
                     // Submit form via AJAX
                     fetch(actionUrl, {
@@ -1263,13 +1321,24 @@
                             // Close modal
                             closeRespondModal();
                             
-                            // Show success popup
-                            showSuccessPopup('Response submitted successfully!');
-                            
-                            // Reload page after 2 seconds to show updated data
-                            setTimeout(() => {
-                                location.reload();
-                            }, 2000);
+                            // If marked as solved, remove the row from the table
+                            if (actionType === 'solved') {
+                                const reportRow = document.querySelector(`tr[data-id="${reportId}"]`);
+                                if (reportRow) {
+                                    reportRow.style.transition = 'opacity 0.3s ease-out';
+                                    reportRow.style.opacity = '0';
+                                    setTimeout(() => {
+                                        reportRow.remove();
+                                    }, 300);
+                                }
+                                showSuccessPopup('Report marked as solved and moved to Solved page!');
+                            } else {
+                                showSuccessPopup('Response submitted successfully!');
+                                // Reload page after 2 seconds to show updated data
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 2000);
+                            }
                         } else {
                             alert('Failed to submit response. Please try again.');
                         }
@@ -1328,21 +1397,27 @@
 
         // Filter reports by disaster type, status, and action status
         function filterAdminReports() {
-            const disasterFilter = document.getElementById('adminDisasterFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-            const actionStatusFilter = document.getElementById('actionStatusFilter').value;
+            const disasterFilter      = document.getElementById('adminDisasterFilter').value;
+            const statusFilter        = document.getElementById('statusFilter').value;
+            const actionStatusFilter  = document.getElementById('actionStatusFilter').value;
+            const barangayFilter      = document.getElementById('barangayFilter').value;
+            const barangayActionFilter = document.getElementById('barangayActionFilter').value;
             const rows = document.querySelectorAll('.report-row');
             
             rows.forEach(row => {
-                const disasterType = row.getAttribute('data-disaster-type');
-                const status = row.getAttribute('data-status');
-                const actionStatus = row.getAttribute('data-action-status');
+                const disasterType   = row.getAttribute('data-disaster-type');
+                const status         = row.getAttribute('data-status');
+                const actionStatus   = row.getAttribute('data-action-status');
+                const barangayId     = row.getAttribute('data-barangay-id');
+                const barangayAction = row.getAttribute('data-barangay-action') || 'none';
                 
-                const matchesDisaster = disasterFilter === '' || disasterType === disasterFilter;
-                const matchesStatus = statusFilter === '' || status === statusFilter;
-                const matchesAction = actionStatusFilter === '' || actionStatus === actionStatusFilter;
+                const matchesDisaster       = disasterFilter      === '' || disasterType   === disasterFilter;
+                const matchesStatus         = statusFilter         === '' || status         === statusFilter;
+                const matchesAction         = actionStatusFilter   === '' || actionStatus   === actionStatusFilter;
+                const matchesBarangay       = barangayFilter       === '' || barangayId     === barangayFilter;
+                const matchesBarangayAction = barangayActionFilter === '' || barangayAction === barangayActionFilter;
                 
-                if (matchesDisaster && matchesStatus && matchesAction) {
+                if (matchesDisaster && matchesStatus && matchesAction && matchesBarangay && matchesBarangayAction) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -1929,6 +2004,90 @@
         } else {
             console.log('✓ Using Pusher real-time notifications (no polling needed)');
         }
+
+        // =====================================================
+        // BARANGAY ACTION STATUS POLLING (always active)
+        // Updates the Barangay Action column when a barangay
+        // saves approved / disapproved — no page reload needed.
+        // =====================================================
+        let barangayPollTime = '{{ now()->toISOString() }}';
+
+        function pollBarangayUpdates() {
+            fetch('{{ route("admin.reports.barangay-updates") }}?since=' + encodeURIComponent(barangayPollTime), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                barangayPollTime = data.server_time;
+                (data.reports || []).forEach(updateBarangayActionCell);
+            })
+            .catch(() => {});
+        }
+
+        function updateBarangayActionCell(report) {
+            const row = document.querySelector('.report-row[data-id="' + report.id + '"]');
+            if (!row) return;
+
+            const prev = row.getAttribute('data-barangay-action') || 'none';
+            if (prev === report.barangay_action) return; // nothing changed
+
+            row.setAttribute('data-barangay-action', report.barangay_action);
+
+            // Barangay Action is the 10th visible TD (index 9)
+            const tds = row.querySelectorAll('td');
+            if (!tds[9]) return;
+
+            const badgeMap = {
+                approved:    '<span style="background:#d1fae5;color:#065f46;padding:0.5rem 0.75rem;border-radius:6px;font-size:0.8rem;font-weight:600;display:inline-block;">Approved</span>',
+                disapproved: '<span style="background:#fee2e2;color:#991b1b;padding:0.5rem 0.75rem;border-radius:6px;font-size:0.8rem;font-weight:600;display:inline-block;">Disapproved</span>',
+                none:        '<span style="color:#94a3b8;font-size:0.875rem;">-</span>',
+            };
+            tds[9].innerHTML = badgeMap[report.barangay_action] || badgeMap.none;
+
+            // Add to notification bell list using the same structure as other notifications
+            const label = report.barangay_action === 'approved' ? '✅ Barangay Approved' : '❌ Barangay Disapproved';
+            notificationsList.unshift({
+                id: report.id,                          // numeric — viewReport() uses this to highlight row
+                disaster_type: report.disaster_type_name,
+                user_name: report.barangay_name || 'Barangay',
+                time_ago: 'Just now',
+                read: false,
+            });
+            if (notificationsList.length > 50) notificationsList.pop();
+            notificationCount++;
+            notificationBadge.textContent = notificationCount;
+            notificationBadge.style.display = 'block';
+            populateNotifications();
+
+            // Toast pop-up
+            const toast = document.createElement('div');
+            toast.className = 'realtime-notification';
+            toast.innerHTML = `
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;flex-shrink:0;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                    <strong>${label}</strong><br>
+                    <small>${report.disaster_type_name} — ${report.barangay_name || 'Barangay'}</small>
+                </div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+
+            // Yellow flash on the row
+            row.style.transition = 'none';
+            row.style.backgroundColor = '#fef9c3';
+            setTimeout(() => { row.style.transition = 'background-color 1.2s'; row.style.backgroundColor = ''; }, 2500);
+
+            // Beep
+            playNotificationSound();
+        }
+
+        // Poll every 4 seconds regardless of Pusher
+        pollBarangayUpdates();
+        setInterval(pollBarangayUpdates, 4000);
 
         // Report Detail Modal Functions
         function openReportDetailModal(row) {

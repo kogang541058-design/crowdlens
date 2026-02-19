@@ -119,7 +119,6 @@ If you don't want to use Pusher, you can use **polling** (old method):
    - `report.submitted` event with data
 
 ---
-
 ## ❌ Still Not Working?
 
 1. **Check browser console for errors** (F12)

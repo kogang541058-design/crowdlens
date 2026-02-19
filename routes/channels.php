@@ -16,3 +16,9 @@ Broadcast::channel('admin-notifications', function ($user) {
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });
+
+// Barangay channel - only that specific barangay can listen
+Broadcast::channel('barangay.{barangayId}', function ($user, $barangayId) {
+    $barangay = auth()->guard('barangay')->user();
+    return $barangay && (int) $barangay->id === (int) $barangayId;
+});

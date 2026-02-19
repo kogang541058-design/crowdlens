@@ -36,10 +36,16 @@ class AdminResponded implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        // Broadcast to specific user's private channel
-        return [
+        $channels = [
             new PrivateChannel('user.' . $this->userId),
         ];
+
+        // Also broadcast to the barangay channel so barangay portal updates in real-time
+        if ($this->report->barangay_id) {
+            $channels[] = new Channel('barangay.' . $this->report->barangay_id);
+        }
+
+        return $channels;
     }
 
     /**
@@ -58,10 +64,13 @@ class AdminResponded implements ShouldBroadcast
         return [
             'report_id' => $this->report->id,
             'disaster_type' => $this->report->disaster_type,
+            'disaster_type_name' => ucfirst($this->report->disaster_type),
             'description' => $this->report->description,
             'location' => $this->report->location,
-            'response_message' => $this->response->response_message,
+            'status' => $this->report->status,
             'action_type' => $this->response->action_type,
+            'barangay_id' => $this->report->barangay_id,
+            'response_message' => $this->response->response_message,
             'responded_at' => $this->response->created_at->format('M d, Y h:i A'),
             'admin_name' => $this->response->admin->name ?? 'Admin',
         ];

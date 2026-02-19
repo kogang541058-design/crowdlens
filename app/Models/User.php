@@ -20,6 +20,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
     ];
 
@@ -44,5 +45,57 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the active block for the user.
+     */
+    public function activeBlock()
+    {
+        return $this->hasOne(UserBlock::class)->where('is_active', true)->latest();
+    }
+
+    /**
+     * Get all blocks for the user.
+     */
+    public function blocks()
+    {
+        return $this->hasMany(UserBlock::class);
+    }
+
+    /**
+     * Check if user is currently blocked.
+     */
+    public function isBlocked()
+    {
+        $activeBlock = $this->activeBlock;
+        
+        if (!$activeBlock) {
+            return false;
+        }
+
+        // Check if block has expired
+        if ($activeBlock->blocked_until && now()->greaterThan($activeBlock->blocked_until)) {
+            $activeBlock->update(['is_active' => false]);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get the active block reason.
+     */
+    public function getBlockReasonAttribute()
+    {
+        return $this->activeBlock?->block_reason;
+    }
+
+    /**
+     * Get the blocked until date.
+     */
+    public function getBlockedUntilAttribute()
+    {
+        return $this->activeBlock?->blocked_until;
     }
 }

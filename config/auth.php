@@ -45,6 +45,11 @@ return [
             'driver' => 'session',
             'provider' => 'admins',
         ],
+
+        'barangay' => [
+            'driver' => 'session',
+            'provider' => 'barangays',
+        ],
     ],
 
     /*
@@ -73,6 +78,11 @@ return [
         'admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,
+        ],
+
+        'barangays' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Barangay::class,
         ],
 
         // 'users' => [

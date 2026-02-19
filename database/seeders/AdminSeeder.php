@@ -14,18 +14,20 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create default admin user
+        // Create super admin user
+        Admin::create([
+            'name' => 'Super Admin',
+            'email' => 'superadmin@davaocity.gov.ph',
+            'password' => 'superadmin123',
+            'role' => 'super_admin',
+        ]);
+
+        // Create regular admin user
         Admin::create([
             'name' => 'Admin',
             'email' => 'admin@davaocity.gov.ph',
-            'password' => 'admin123', // Will be auto-hashed by model cast
+            'password' => 'admin123',
+            'role' => 'admin',
         ]);
-
-        // You can add more admins here if needed
-        // Admin::create([
-        //     'name' => 'Super Admin',
-        //     'email' => 'superadmin@davaocity.gov.ph',
-        //     'password' => 'superadmin123',
-        // ]);
     }
 }

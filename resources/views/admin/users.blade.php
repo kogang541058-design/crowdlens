@@ -165,6 +165,10 @@
             transform: translateY(-2px);
         }
 
+        .manage-menu button:hover {
+            background: #f8fafc !important;
+        }
+
         .users-table {
             width: 100%;
             border-collapse: collapse;
@@ -455,6 +459,14 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.barangay') }}" class="nav-link">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Barangay
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.solved') }}" class="nav-link">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -527,18 +539,92 @@
                 <thead>
                     <tr>
                         <th>NAME</th>
-                        <th>EMAIL</th>
+                        <th>
+                            EMAIL
+                            <button onclick="toggleEmailMasking()" id="emailToggleBtn" title="Show/Hide emails" style="margin-left: 0.5rem; background: transparent; color: #6366f1; border: none; padding: 0.25rem; cursor: pointer; font-size: 1rem; display: inline-flex; align-items: center; vertical-align: middle;">
+                                <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg id="eyeOffIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </th>
                         <th>REGISTERED</th>
                         <th>STATUS</th>
+                        <th style="text-align: center;">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($users as $user)
                     <tr>
                         <td>{{ $user->name }}</td>
-                        <td>{{ $user->email }}</td>
+                        <td>
+                            <span class="email-masked">
+                                @php
+                                    $email = $user->email;
+                                    $atPos = strpos($email, '@');
+                                    if ($atPos !== false) {
+                                        $localPart = substr($email, 0, $atPos);
+                                        $domain = substr($email, $atPos);
+                                        $visibleChars = min(3, strlen($localPart));
+                                        $maskedEmail = substr($localPart, 0, $visibleChars) . str_repeat('*', strlen($localPart) - $visibleChars) . $domain;
+                                        echo $maskedEmail;
+                                    } else {
+                                        echo $email;
+                                    }
+                                @endphp
+                            </span>
+                            <span class="email-full" style="display: none;">{{ $user->email }}</span>
+                        </td>
                         <td>{{ $user->created_at->format('M d, Y') }}</td>
-                        <td><span class="status-badge">Active</span></td>
+                        <td>
+                            @if($user->isBlocked())
+                                <span class="status-badge" style="background-color: #fee2e2; color: #dc2626; cursor: help;" title="Reason: {{ $user->block_reason }}">Blocked</span>
+                            @else
+                                <span class="status-badge" style="background-color: #dcfce7; color: #16a34a;">Active</span>
+                            @endif
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="position: relative; display: inline-block;">
+                                <button onclick="toggleManageMenu({{ $user->id }})" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                    </svg>
+                                    Manage
+                                </button>
+                                <div id="manageMenu{{ $user->id }}" class="manage-menu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 0.25rem; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1000; min-width: 150px; overflow: hidden;">
+                                    <button onclick="editUser({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}'); toggleManageMenu({{ $user->id }})" style="width: 100%; background: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; text-align: left; display: flex; align-items: center; gap: 0.5rem; color: #334155; border-bottom: 1px solid #f1f5f9;">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
+                                    @if($user->isBlocked())
+                                    <form method="POST" action="{{ route('admin.users.block', $user->id) }}" onsubmit="return confirm('Are you sure you want to unblock this user?');" style="margin: 0;">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="action" value="unblock">
+                                        <button type="submit" style="width: 100%; background: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; text-align: left; display: flex; align-items: center; gap: 0.5rem; color: #16a34a;">
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            Unblock
+                                        </button>
+                                    </form>
+                                    @else
+                                    <button onclick="openBlockModal({{ $user->id }}, '{{ $user->name }}'); toggleManageMenu({{ $user->id }})" style="width: 100%; background: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; text-align: left; display: flex; align-items: center; gap: 0.5rem; color: #ef4444;">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                        </svg>
+                                        Block
+                                    </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -828,6 +914,410 @@
         // Check immediately and then every 5 seconds
         checkNewReports();
         setInterval(checkNewReports, 5000);
+
+        // Add User Modal Functions
+        function openAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'flex';
+            // Clear previous errors
+            document.getElementById('addUserErrors').style.display = 'none';
+            document.getElementById('addUserErrorList').innerHTML = '';
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+            document.getElementById('addUserForm').reset();
+            document.getElementById('addUserErrors').style.display = 'none';
+            document.getElementById('addUserErrorList').innerHTML = '';
+        }
+
+        // Toggle Manage Menu
+        function toggleManageMenu(userId) {
+            const menu = document.getElementById('manageMenu' + userId);
+            const allMenus = document.querySelectorAll('.manage-menu');
+            
+            // Close all other menus
+            allMenus.forEach(m => {
+                if (m !== menu) {
+                    m.style.display = 'none';
+                }
+            });
+            
+            // Toggle current menu
+            if (menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+            } else {
+                menu.style.display = 'none';
+            }
+        }
+
+        // Toggle Email Masking
+        function toggleEmailMasking() {
+            const maskedEmails = document.querySelectorAll('.email-masked');
+            const fullEmails = document.querySelectorAll('.email-full');
+            const eyeIcon = document.getElementById('eyeIcon');
+            const eyeOffIcon = document.getElementById('eyeOffIcon');
+            
+            maskedEmails.forEach(masked => {
+                if (masked.style.display === 'none') {
+                    masked.style.display = '';
+                } else {
+                    masked.style.display = 'none';
+                }
+            });
+            
+            fullEmails.forEach(full => {
+                if (full.style.display === 'none') {
+                    full.style.display = '';
+                } else {
+                    full.style.display = 'none';
+                }
+            });
+            
+            // Toggle icon
+            if (eyeIcon.style.display === 'none') {
+                eyeIcon.style.display = '';
+                eyeOffIcon.style.display = 'none';
+            } else {
+                eyeIcon.style.display = 'none';
+                eyeOffIcon.style.display = '';
+            }
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.manage-menu') && !event.target.closest('button')) {
+                document.querySelectorAll('.manage-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+
+        // Edit User Modal Functions
+        function editUser(userId, userName, userEmail) {
+            document.getElementById('editUserModal').style.display = 'flex';
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserName').value = userName;
+            document.getElementById('editUserEmail').value = userEmail;
+            document.getElementById('editUserForm').action = `/admin/users/${userId}`;
+            
+            // Clear previous errors
+            document.getElementById('editUserErrors').style.display = 'none';
+            document.getElementById('editUserErrorList').innerHTML = '';
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+            document.getElementById('editUserForm').reset();
+            document.getElementById('editUserErrors').style.display = 'none';
+            document.getElementById('editUserErrorList').innerHTML = '';
+        }
+
+        // Block User Modal Functions
+        function openBlockModal(userId, userName) {
+            document.getElementById('blockUserModal').style.display = 'flex';
+            document.getElementById('blockUserName').textContent = userName;
+            document.getElementById('blockUserForm').action = `/admin/users/${userId}/block`;
+        }
+
+        function closeBlockModal() {
+            document.getElementById('blockUserModal').style.display = 'none';
+            document.getElementById('blockUserForm').reset();
+        }
+
+        // Add AJAX form submission for Edit User
+        document.addEventListener('DOMContentLoaded', function() {
+            const editForm = document.getElementById('editUserForm');
+            if (editForm) {
+                editForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Clear previous errors
+                    document.getElementById('editUserErrors').style.display = 'none';
+                    document.getElementById('editUserErrorList').innerHTML = '';
+                    
+                    const password = this.querySelector('input[name="password"]').value;
+                    const passwordConfirm = this.querySelector('input[name="password_confirmation"]').value;
+                    const errors = [];
+                    
+                    // Client-side validation
+                    if (password || passwordConfirm) {
+                        if (!password || !passwordConfirm) {
+                            errors.push('Both password fields are required if changing password');
+                        } else {
+                            if (password.length < 8) {
+                                errors.push('Password must be at least 8 characters long');
+                            }
+                            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+                                errors.push('Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)');
+                            }
+                            if (password !== passwordConfirm) {
+                                errors.push('Passwords do not match');
+                            }
+                        }
+                    }
+                    
+                    if (errors.length > 0) {
+                        const errorList = document.getElementById('editUserErrorList');
+                        errorList.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+                        document.getElementById('editUserErrors').style.display = 'block';
+                        return false;
+                    }
+                    
+                    // Submit via AJAX
+                    const formData = new FormData(this);
+                    const userId = document.getElementById('editUserId').value;
+                    
+                    fetch(`/admin/users/${userId}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.errors) {
+                            // Show server-side validation errors
+                            const errorList = document.getElementById('editUserErrorList');
+                            const errorMessages = Object.values(data.errors).flat();
+                            errorList.innerHTML = errorMessages.map(error => `<li>${error}</li>`).join('');
+                            document.getElementById('editUserErrors').style.display = 'block';
+                        } else if (data.success) {
+                            // Success - reload page to show updated data
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        // Show error message
+                        const errorList = document.getElementById('editUserErrorList');
+                        errorList.innerHTML = '<li>An error occurred. Please try again.</li>';
+                        document.getElementById('editUserErrors').style.display = 'block';
+                    });
+                    
+                    return false;
+                });
+            }
+        });
+        
+        // Auto-reopen Edit User modal if there are server-side validation errors
+        @if($errors->any() && old('_form') === 'edit_user')
+            document.getElementById('editUserModal').style.display = 'flex';
+            document.getElementById('editUserId').value = '{{ old('user_id') }}';
+            document.getElementById('editUserName').value = '{{ old('name') }}';
+            document.getElementById('editUserEmail').value = '{{ old('email') }}';
+            document.getElementById('editUserForm').action = `/admin/users/{{ old('user_id') }}`;
+        @endif
+        
+        // Add AJAX form submission for Add User
+        document.addEventListener('DOMContentLoaded', function() {
+            const addForm = document.getElementById('addUserForm');
+            if (addForm) {
+                addForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Clear previous errors
+                    document.getElementById('addUserErrors').style.display = 'none';
+                    document.getElementById('addUserErrorList').innerHTML = '';
+                    
+                    // Submit via AJAX
+                    const formData = new FormData(this);
+                    
+                    fetch('{{ route('admin.users.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.errors) {
+                            // Show server-side validation errors
+                            const errorList = document.getElementById('addUserErrorList');
+                            const errorMessages = Object.values(data.errors).flat();
+                            errorList.innerHTML = errorMessages.map(error => `<li>${error}</li>`).join('');
+                            document.getElementById('addUserErrors').style.display = 'block';
+                        } else if (data.success) {
+                            // Success - reload page to show new user
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        // Show error message
+                        const errorList = document.getElementById('addUserErrorList');
+                        errorList.innerHTML = '<li>An error occurred. Please try again.</li>';
+                        document.getElementById('addUserErrors').style.display = 'block';
+                    });
+                    
+                    return false;
+                });
+            }
+        });
+        
+        // Add event listener to Add User button
+        document.querySelector('.add-btn').addEventListener('click', openAddUserModal);
     </script>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 90%; position: relative;">
+            <button onclick="closeAddUserModal()" style="position: absolute; top: 1rem; right: 1rem; background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; color: #64748b;">×</button>
+            
+            <h2 style="font-size: 1.5rem; color: #1e293b; margin-bottom: 1.5rem;">Add New User</h2>
+            
+            <!-- Error Messages -->
+            <div id="addUserErrors" style="display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <ul id="addUserErrorList" style="margin: 0; padding-left: 1.5rem;"></ul>
+            </div>
+            
+            <form id="addUserForm" method="POST" action="{{ route('admin.users.store') }}" style="display: flex; flex-direction: column; gap: 1rem;">
+                @csrf
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Name *</label>
+                    <input type="text" name="name" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Email *</label>
+                    <input type="email" name="email" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Password *</label>
+                    <input type="password" name="password" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                    <small style="color: #64748b; font-size: 0.75rem;">Minimum 8 characters</small>
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Confirm Password *</label>
+                    <input type="password" name="password_confirmation" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" onclick="closeAddUserModal()" style="flex: 1; background: #f1f5f9; color: #64748b; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
+                        Cancel
+                    </button>
+                    <button type="submit" style="flex: 1; background: #10b981; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
+                        Add User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 500px; width: 90%; position: relative;">
+            <button onclick="closeEditUserModal()" style="position: absolute; top: 1rem; right: 1rem; background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; color: #64748b;">×</button>
+            
+            <h2 style="font-size: 1.5rem; color: #1e293b; margin-bottom: 1.5rem;">Edit User</h2>
+            
+            <!-- Error Messages -->
+            <div id="editUserErrors" style="display: none; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <ul id="editUserErrorList" style="margin: 0; padding-left: 1.5rem;"></ul>
+            </div>
+            
+            @if($errors->any() && old('_form') === 'edit_user')
+            <div style="background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <ul style="margin: 0; padding-left: 1.5rem;">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+            @endif
+            
+            <form id="editUserForm" method="POST" style="display: flex; flex-direction: column; gap: 1rem;">
+                @csrf
+                @method('PUT')
+                <input type="hidden" id="editUserId" name="user_id">
+                <input type="hidden" name="_form" value="edit_user">
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Name *</label>
+                    <input type="text" id="editUserName" name="name" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Email *</label>
+                    <input type="email" id="editUserEmail" name="email" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">New Password</label>
+                    <input type="password" name="password" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                    <small style="color: #64748b; font-size: 0.75rem;">Leave blank to keep current password</small>
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Confirm New Password</label>
+                    <input type="password" name="password_confirmation" minlength="8" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" onclick="closeEditUserModal()" style="flex: 1; background: #f1f5f9; color: #64748b; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
+                        Cancel
+                    </button>
+                    <button type="submit" style="flex: 1; background: #3b82f6; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
+                        Update User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Block User Modal -->
+    <div id="blockUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <div style="padding: 1.5rem; border-bottom: 1px solid #e2e8f0;">
+                <h3 style="margin: 0; color: #1e293b; font-size: 1.25rem; font-weight: 700;">Block User</h3>
+            </div>
+            
+            <form method="POST" id="blockUserForm" style="padding: 1.5rem;">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="action" value="block">
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <p style="color: #64748b; margin-bottom: 1rem;">You are about to block: <strong id="blockUserName" style="color: #1e293b;"></strong></p>
+                    
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Select Reason for Blocking</label>
+                    <select name="block_reason" required style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem; background-color: white; margin-bottom: 1rem;">
+                        <option value="">Choose a reason...</option>
+                        <option value="Spam reports">Spam reports</option>
+                        <option value="Always invalid reports">Always invalid reports</option>
+                        <option value="Abusive behavior">Abusive behavior</option>
+                        <option value="Fake information">Fake information</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Block Duration</label>
+                    <select name="block_duration" required style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem; background-color: white;">
+                        <option value="">Select duration...</option>
+                        <option value="1">1 Day</option>
+                        <option value="3">3 Days</option>
+                        <option value="7">1 Week</option>
+                        <option value="14">2 Weeks</option>
+                        <option value="30">1 Month</option>
+                        <option value="permanent">Permanent</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeBlockModal()" style="flex: 1; background: #f1f5f9; color: #64748b; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
+                        Cancel
+                    </button>
+                    <button type="submit" style="flex: 1; background: #ef4444; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
+                        Block User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

@@ -77,6 +77,7 @@ class AdminAuthController extends Controller
     {
         $verifiedReports = \App\Models\Report::with('user')
             ->where('status', 'verified')
+            ->whereDoesntHave('solved')
             ->orderBy('created_at', 'desc')
             ->get();
         $disasterTypes = \App\Models\DisasterType::where('is_active', true)->get();
@@ -88,8 +89,9 @@ class AdminAuthController extends Controller
      */
     public function reports()
     {
-        $reports = \App\Models\Report::with(['user', 'solved', 'responses'])
+        $reports = \App\Models\Report::with(['user', 'solved', 'responses', 'barangay'])
             ->whereIn('status', ['pending', 'verified', 'unverified'])
+            ->whereDoesntHave('solved')
             ->orderBy('created_at', 'desc')
             ->get();
         $disasterTypes = \App\Models\DisasterType::where('is_active', true)->orderBy('name')->get();
@@ -103,6 +105,134 @@ class AdminAuthController extends Controller
     {
         $users = \App\Models\User::latest()->get();
         return view('admin.users', compact('users'));
+    }
+
+    /**
+     * Store a new user.
+     */
+    public function storeUser(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[!@#$%^&*(),.?":{}|<>]/'
+            ],
+        ], [
+            'name.required' => 'Please provide the user\'s full name.',
+            'email.required' => 'Please provide an email address.',
+            'email.email' => 'Please provide a valid email address.',
+            'email.unique' => 'This email address is already registered.',
+            'password.required' => 'Please provide a password.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'password.confirmed' => 'Password confirmation does not match.',
+            'password.regex' => 'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>).'
+        ]);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        \App\Models\User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+        ]);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'User created successfully!']);
+        }
+
+        return redirect()->back()->with('success', 'User created successfully!');
+    }
+
+    /**
+     * Update an existing user.
+     */
+    public function updateUser(Request $request, \App\Models\User $user)
+    {
+        $validator = \Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => [
+                'nullable',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[!@#$%^&*(),.?":{}|<>]/'
+            ],
+        ], [
+            'password.regex' => 'The password must contain at least one special character (!@#$%^&*(),.?":{}|<>).'
+        ]);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        if ($request->filled('password')) {
+            $user->update(['password' => bcrypt($request->password)]);
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'User updated successfully!']);
+        }
+
+        return redirect()->back()->with('success', 'User updated successfully!');
+    }
+
+    /**
+     * Block or unblock a user.
+     */
+    public function blockUser(Request $request, \App\Models\User $user)
+    {
+        $action = $request->input('action', 'block');
+        
+        if ($action === 'unblock') {
+            // Deactivate current active block
+            $activeBlock = $user->activeBlock;
+            if ($activeBlock) {
+                $activeBlock->update(['is_active' => false]);
+            }
+            return redirect()->back()->with('success', 'User unblocked successfully!');
+        } else {
+            $request->validate([
+                'block_reason' => 'required|string',
+                'block_duration' => 'required'
+            ]);
+            
+            $blockedUntil = null;
+            if ($request->block_duration !== 'permanent') {
+                $blockedUntil = now()->addDays((int)$request->block_duration);
+            }
+            
+            // Deactivate any existing active blocks
+            $user->blocks()->where('is_active', true)->update(['is_active' => false]);
+            
+            // Create new block record
+            \App\Models\UserBlock::create([
+                'user_id' => $user->id,
+                'block_reason' => $request->block_reason,
+                'blocked_until' => $blockedUntil,
+                'is_active' => true
+            ]);
+            
+            return redirect()->back()->with('success', 'User blocked successfully!');
+        }
     }
 
     /**
@@ -162,6 +292,24 @@ class AdminAuthController extends Controller
         \Log::info('Broadcasting AdminResponded event for report ID: ' . $report->id . ' to user ID: ' . $report->user_id);
         broadcast(new \App\Events\AdminResponded($report->load(['user', 'responses.admin']), $response->load('admin'), $report->user_id))->toOthers();
 
+        // If status is unverified, delete the report and its associated files
+        if ($validated['status'] === 'unverified') {
+            // Delete media files from storage
+            if ($report->image) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($report->image);
+            }
+            if ($report->video) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($report->video);
+            }
+            // Delete related records then the report itself
+            \App\Models\Notification::where('report_id', $report->id)->delete();
+            \App\Models\Solved::where('report_id', $report->id)->delete();
+            \App\Models\ReportResponse::where('report_id', $report->id)->delete();
+            $report->delete();
+
+            return redirect()->back()->with('success', 'Report marked as unverified and has been deleted.');
+        }
+
         return redirect()->back()->with('success', 'Response submitted successfully! Status updated to ' . $validated['status'] . '.');
     }
 
@@ -219,7 +367,9 @@ class AdminAuthController extends Controller
      */
     public function getReportCount()
     {
-        $count = \App\Models\Report::whereIn('status', ['pending', 'verified', 'unverified'])->count();
+        $count = \App\Models\Report::whereIn('status', ['pending', 'verified', 'unverified'])
+            ->whereDoesntHave('solved')
+            ->count();
         return response()->json(['count' => $count]);
     }
 
@@ -233,6 +383,7 @@ class AdminAuthController extends Controller
         $newReports = \App\Models\Report::with(['user', 'solved', 'responses'])
             ->where('id', '>', $lastId)
             ->whereIn('status', ['pending', 'verified', 'unverified'])
+            ->whereDoesntHave('solved')
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($report) {
@@ -263,6 +414,37 @@ class AdminAuthController extends Controller
     }
 
     /**
+     * Polling endpoint for barangay action status changes.
+     * Returns reports whose barangay_action_status was updated after `since` timestamp.
+     */
+    public function pollBarangayUpdates(Request $request)
+    {
+        $since = $request->query('since');
+
+        $query = \App\Models\Report::with(['user', 'barangay']);
+
+        if ($since) {
+            $query->where('updated_at', '>', $since)
+                  ->whereNotNull('barangay_action_status');
+        } else {
+            // Return nothing on first call — just get server time
+            return response()->json(['reports' => [], 'server_time' => now()->toISOString()]);
+        }
+
+        $reports = $query->orderBy('updated_at', 'desc')->get()->map(function ($r) {
+            return [
+                'id'                  => $r->id,
+                'barangay_action'     => $r->barangay_action_status ?? 'none',
+                'barangay_name'       => $r->barangay ? $r->barangay->name : null,
+                'disaster_type_name'  => ucfirst($r->disaster_type),
+                'user_name'           => $r->user->name ?? 'N/A',
+            ];
+        });
+
+        return response()->json(['reports' => $reports, 'server_time' => now()->toISOString()]);
+    }
+
+    /**
      * Check for new reports (polling fallback)
      */
     public function checkNewReports(Request $request)
@@ -270,6 +452,7 @@ class AdminAuthController extends Controller
         $sinceId = $request->input('since', 0);
         
         $newReports = \App\Models\Report::where('id', '>', $sinceId)
+            ->whereDoesntHave('solved')
             ->with('user')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -382,6 +565,81 @@ class AdminAuthController extends Controller
             ->update(['is_read' => true]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Show barangay page.
+     */
+    public function barangay()
+    {
+        $barangays = \App\Models\Barangay::latest()->get();
+        return view('admin.barangay', compact('barangays'));
+    }
+
+    /**
+     * Store a new barangay.
+     */
+    public function storeBarangay(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:barangays,username',
+            'password' => 'required|string|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        \App\Models\Barangay::create([
+            'name' => $request->name,
+            'username' => $request->username,
+            'password' => bcrypt($request->password),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Barangay added successfully!']);
+    }
+
+    /**
+     * Update a barangay.
+     */
+    public function updateBarangay(Request $request, $id)
+    {
+        $barangay = \App\Models\Barangay::findOrFail($id);
+
+        $validator = \Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|unique:barangays,username,' . $id,
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $updateData = [
+            'name' => $request->name,
+            'username' => $request->username,
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = bcrypt($request->password);
+        }
+
+        $barangay->update($updateData);
+
+        return response()->json(['success' => true, 'message' => 'Barangay updated successfully!']);
+    }
+
+    /**
+     * Delete a barangay.
+     */
+    public function deleteBarangay($id)
+    {
+        $barangay = \App\Models\Barangay::findOrFail($id);
+        $barangay->delete();
+
+        return response()->json(['success' => true, 'message' => 'Barangay deleted successfully!']);
     }
 
 }

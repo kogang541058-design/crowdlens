@@ -30,9 +30,16 @@ class ReportSubmitted implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new Channel('admin-notifications'),
         ];
+
+        // Also broadcast to the barangay channel if the report has a barangay
+        if ($this->report->barangay_id) {
+            $channels[] = new Channel('barangay.' . $this->report->barangay_id);
+        }
+
+        return $channels;
     }
 
     /**

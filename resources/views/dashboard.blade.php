@@ -78,6 +78,26 @@
             background: #dc2626;
             transform: translateY(-1px);
         }
+        
+        .settings-btn {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .settings-btn:hover {
+            background: #475569;
+            transform: translateY(-1px);
+        }
 
         .container {
             max-width: 1400px;
@@ -290,6 +310,75 @@
         }
 
         /* Media Modal Styles */
+        /* Report Detail Modal */
+        .detail-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .detail-overlay.active { display: flex; }
+        .detail-modal {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 620px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .detail-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-modal-header h3 { font-size: 1.25rem; color: #1e293b; font-weight: 700; }
+        .detail-close {
+            background: none; border: none; font-size: 1.5rem;
+            cursor: pointer; color: #64748b; line-height: 1;
+        }
+        .detail-close:hover { color: #ef4444; }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .detail-grid.full { grid-template-columns: 1fr; }
+        .detail-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+        .detail-value { font-size: 0.95rem; color: #1e293b; }
+        .detail-media-wrap { margin-top: 1rem; }
+        .detail-media-wrap img,
+        .detail-media-wrap video {
+            width: 100%; border-radius: 10px;
+            max-height: 260px; object-fit: cover; margin-top: 0.5rem;
+        }
+        .detail-response-box {
+            margin-top: 1.25rem;
+            padding: 1rem;
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            border-radius: 8px;
+        }
+        .detail-response-box .detail-label { color: #16a34a; }
+        .user-report-row:hover { background: #f8fafc; }
+
         .media-modal {
             display: none;
             position: fixed;
@@ -1052,6 +1141,13 @@
                 <span class="notification-badge" id="userNotificationBadge">0</span>
             </button>
             <span class="user-name">{{ Auth::user()->name }}</span>
+            <a href="{{ route('settings') }}" class="settings-btn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Settings
+            </a>
             <form action="{{ route('logout') }}" method="POST" style="display: inline;">
                 @csrf
                 <button type="submit" class="logout-btn">Logout</button>
@@ -1197,7 +1293,27 @@
                 </thead>
                 <tbody>
                     @forelse($reports as $report)
-                    <tr class="user-report-row" data-disaster-type="{{ $report->disaster_type }}" data-status="{{ $report->status }}" data-action-status="{{ $report->solved ? 'solved' : ($report->responses()->where('action_type', 'in_progress')->exists() ? 'in_progress' : '') }}">
+                    @php
+                        $actionStatus = $report->solved ? 'solved' : ($report->responses()->where('action_type','in_progress')->exists() ? 'in_progress' : 'none');
+                        $reportLocation = $report->location ?: ($report->latitude . ', ' . $report->longitude);
+                        $latestResponse = $report->responses->sortByDesc('created_at')->first();
+                    @endphp
+                    <tr class="user-report-row"
+                        data-disaster-type="{{ $report->disaster_type }}"
+                        data-status="{{ $report->status }}"
+                        data-action-status="{{ $actionStatus }}"
+                        data-id="{{ $report->id }}"
+                        data-description="{{ e($report->description) }}"
+                        data-user="{{ e($report->user->name) }}"
+                        data-location="{{ e($reportLocation) }}"
+                        data-date="{{ $report->created_at->format('M d, Y') }}"
+                        data-time="{{ $report->created_at->format('h:i A') }}"
+                        data-image="{{ $report->image ? Storage::url($report->image) : '' }}"
+                        data-video="{{ $report->video ? Storage::url($report->video) : '' }}"
+                        data-response="{{ e($latestResponse->response_message ?? '') }}"
+                        data-response-date="{{ $latestResponse ? $latestResponse->created_at->format('M d, Y h:i A') : '' }}"
+                        style="cursor:pointer;"
+                        onclick="openReportDetail(this)">
                         <td>{{ $report->disaster_type }}</td>
                         <td>{{ Str::limit($report->description, 50) }}</td>
                         <td>{{ $report->created_at->format('M d, Y') }}</td>
@@ -1286,11 +1402,26 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Barangay *</label>
+                    <select name="barangay_id" class="form-select" required>
+                        <option value="">-- Select your barangay --</option>
+                        @foreach($barangays as $barangay)
+                            <option value="{{ $barangay->id }}">{{ $barangay->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Description *</label>
-                    <textarea name="description" class="form-textarea" placeholder="Describe the situation..." required></textarea>
-                    @error('description')
-                        <span style="color: #ef4444; font-size: 0.875rem;">{{ $message }}</span>
-                    @enderror
+                    <textarea name="description" id="descriptionTextarea" class="form-textarea" placeholder="Describe the situation..." maxlength="200" required></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
+                        @error('description')
+                            <span style="color: #ef4444; font-size: 0.875rem;">{{ $message }}</span>
+                        @else
+                            <span></span>
+                        @enderror
+                        <span id="charCount" style="color: #64748b; font-size: 0.875rem;">0/200</span>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -1343,6 +1474,72 @@
         </div>
     </div>
 
+    <!-- Report Detail Modal -->
+    <div class="detail-overlay" id="reportDetailOverlay" onclick="closeReportDetail(event)">
+        <div class="detail-modal" onclick="event.stopPropagation()">
+            <div class="detail-modal-header">
+                <h3>Report Details</h3>
+                <button class="detail-close" onclick="closeReportDetail()">&times;</button>
+            </div>
+
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Type of Disaster</div>
+                    <div class="detail-value" id="dd-type"></div>
+                </div>
+                <div>
+                    <div class="detail-label">Date &amp; Time</div>
+                    <div class="detail-value" id="dd-date"></div>
+                </div>
+            </div>
+
+            <div class="detail-grid full">
+                <div>
+                    <div class="detail-label">Description</div>
+                    <div class="detail-value" id="dd-desc" style="line-height:1.6;"></div>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Reporter</div>
+                    <div class="detail-value" id="dd-user"></div>
+                </div>
+                <div>
+                    <div class="detail-label">Location</div>
+                    <div class="detail-value" id="dd-location"></div>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Status</div>
+                    <div id="dd-status"></div>
+                </div>
+                <div>
+                    <div class="detail-label">Action Status</div>
+                    <div id="dd-action"></div>
+                </div>
+            </div>
+
+            <div class="detail-media-wrap" id="dd-image-wrap" style="display:none;">
+                <div class="detail-label">Image</div>
+                <img id="dd-image" src="" alt="Report image">
+            </div>
+
+            <div class="detail-media-wrap" id="dd-video-wrap" style="display:none;">
+                <div class="detail-label">Video</div>
+                <video id="dd-video" controls style="max-height:260px;"></video>
+            </div>
+
+            <div class="detail-response-box" id="dd-response-wrap" style="display:none;">
+                <div class="detail-label">Admin Response</div>
+                <div class="detail-value" id="dd-response" style="margin-top:0.35rem;line-height:1.6;"></div>
+                <div style="font-size:0.78rem;color:#64748b;margin-top:0.25rem;" id="dd-response-date"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Media Modal -->
     <div id="mediaModal" class="media-modal">
         <button class="media-modal-close" onclick="closeMediaModal()">×</button>
@@ -1351,6 +1548,76 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // ── Report Detail Modal ─────────────────────────────────────────────
+        const statusBadgeMap = {
+            pending:    '<span class="status-badge status-pending">Pending</span>',
+            verified:   '<span class="status-badge" style="background:#d1fae5;color:#065f46;">Verified</span>',
+            unverified: '<span class="status-badge" style="background:#fee2e2;color:#991b1b;">Unverified</span>',
+        };
+        const actionBadgeMap = {
+            solved:      '<span class="status-badge" style="background:#d1fae5;color:#065f46;">Solved</span>',
+            in_progress: '<span class="status-badge status-in-progress">In Progress</span>',
+            none:        '<span style="color:#94a3b8;font-size:0.875rem;">—</span>',
+        };
+
+        function openReportDetail(row) {
+            const type         = row.dataset.disasterType;
+            const date         = row.dataset.date + ' ' + row.dataset.time;
+            const desc         = row.dataset.description;
+            const user         = row.dataset.user;
+            const location     = row.dataset.location;
+            const status       = row.dataset.status;
+            const action       = row.dataset.actionStatus;
+            const image        = row.dataset.image;
+            const video        = row.dataset.video;
+            const response     = row.dataset.response;
+            const responseDate = row.dataset.responseDate;
+
+            document.getElementById('dd-type').textContent     = type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById('dd-date').textContent     = date;
+            document.getElementById('dd-desc').textContent     = desc;
+            document.getElementById('dd-user').textContent     = user;
+            document.getElementById('dd-location').textContent = location;
+            document.getElementById('dd-status').innerHTML     = statusBadgeMap[status] || status;
+            document.getElementById('dd-action').innerHTML     = actionBadgeMap[action] || actionBadgeMap.none;
+
+            const imgWrap = document.getElementById('dd-image-wrap');
+            const imgEl   = document.getElementById('dd-image');
+            if (image) { imgEl.src = image; imgWrap.style.display = 'block'; }
+            else { imgWrap.style.display = 'none'; }
+
+            const vidWrap = document.getElementById('dd-video-wrap');
+            const vidEl   = document.getElementById('dd-video');
+            if (video) { vidEl.src = video; vidWrap.style.display = 'block'; }
+            else { vidEl.src = ''; vidWrap.style.display = 'none'; }
+
+            const respWrap = document.getElementById('dd-response-wrap');
+            if (response) {
+                document.getElementById('dd-response').textContent      = response;
+                document.getElementById('dd-response-date').textContent = responseDate ? 'Responded on ' + responseDate : '';
+                respWrap.style.display = 'block';
+            } else {
+                respWrap.style.display = 'none';
+            }
+
+            document.getElementById('reportDetailOverlay').classList.add('active');
+        }
+
+        function closeReportDetail(e) {
+            // Called either by the close button (no event) or by clicking the overlay backdrop
+            if (e && e.currentTarget && e.currentTarget !== e.target) return;
+            const overlay = document.getElementById('reportDetailOverlay');
+            overlay.classList.remove('active');
+            // pause video if playing
+            const vid = document.getElementById('dd-video');
+            if (vid) { vid.pause(); vid.currentTime = 0; }
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeReportDetail();
+        });
+
         // Media Modal Functions
         function showMedia(url, type) {
             console.log('Opening media:', type, url);
@@ -2134,6 +2401,27 @@
                 console.warn('Could not play notification sound:', e);
             }
         }
+
+            // Character counter for description textarea
+            const descriptionTextarea = document.getElementById('descriptionTextarea');
+            const charCount = document.getElementById('charCount');
+            
+            if (descriptionTextarea && charCount) {
+                descriptionTextarea.addEventListener('input', function() {
+                    const currentLength = this.value.length;
+                    const maxLength = 200;
+                    charCount.textContent = currentLength + '/' + maxLength;
+                    
+                    // Change color when approaching limit
+                    if (currentLength >= maxLength) {
+                        charCount.style.color = '#ef4444'; // Red
+                    } else if (currentLength >= 160) {
+                        charCount.style.color = '#f59e0b'; // Orange
+                    } else {
+                        charCount.style.color = '#64748b'; // Gray
+                    }
+                });
+            }
 
         }); // Close DOMContentLoaded
     </script>

@@ -319,19 +319,25 @@
             </form>
             <div class="card">
                 <h3>Welcome back</h3>
-                @if ($errors->has('email') && old('_form') === 'login')
-                    <div class="error-banner">{{ $errors->first('email') }}</div>
+                @if (($errors->has('email') || $errors->has('password')) && old('_form') === 'login')
+                    <div class="error-banner">
+                        @if($errors->has('email'))
+                            {{ $errors->first('email') }}
+                        @elseif($errors->has('password'))
+                            {{ $errors->first('password') }}
+                        @endif
+                    </div>
                 @endif
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <input type="hidden" name="_form" value="login" />
                     <div class="field">
-                        <label class="label" for="login_email">Email address</label>
-                        <input id="login_email" name="email" type="email" value="{{ old('email') }}" required class="input" placeholder="you@example.com" />
+                        <label class="label" for="login_email">Email or Username</label>
+                        <input id="login_email" name="email" type="text" value="{{ old('email') }}" class="input" placeholder="your@email.com or username" />
                     </div>
                     <div class="field">
                         <label class="label" for="login_password">Password</label>
-                        <input id="login_password" name="password" type="password" required class="input" placeholder="••••••••" />
+                        <input id="login_password" name="password" type="password" class="input" placeholder="••••••••" />
                     </div>
                     <div class="row" style="margin-top:1rem; margin-bottom:0;">
                         <label class="checkbox-label">
@@ -356,29 +362,32 @@
             <div class="card">
                 <h3>Create your account</h3>
                 @if ($errors->any() && old('_form') === 'register')
-                    <div class="error-banner">Please fix the errors below</div>
+                    <div class="error-banner">
+                        There are items that require your attention
+                    </div>
                 @endif
                 <form method="POST" action="{{ route('register') }}">
                     @csrf
                     <input type="hidden" name="_form" value="register" />
                     <div class="field">
                         <label class="label" for="name">Full name</label>
-                        <input id="name" name="name" type="text" value="{{ old('name') }}" required class="input" placeholder="John Doe" />
+                        <input id="name" name="name" type="text" value="{{ old('name') }}" class="input" placeholder="John Doe" />
                         @error('name')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <div class="field">
                         <label class="label" for="email">Email address</label>
-                        <input id="email" name="email" type="email" value="{{ old('email') }}" required class="input" placeholder="you@example.com" />
+                        <input id="email" name="email" type="email" value="{{ old('email') }}" class="input" placeholder="you@example.com" />
                         @error('email')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <div class="field">
                         <label class="label" for="password">Password</label>
-                        <input id="password" name="password" type="password" required class="input" placeholder="••••••••" />
+                        <input id="password" name="password" type="password" class="input" placeholder="••••••••" />
                         @error('password')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <div class="field">
                         <label class="label" for="password_confirmation">Confirm password</label>
-                        <input id="password_confirmation" name="password_confirmation" type="password" required class="input" placeholder="••••••••" />
+                        <input id="password_confirmation" name="password_confirmation" type="password" class="input" placeholder="••••••••" />
+                        @error('password_confirmation')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <div class="row">
                         <span></span>

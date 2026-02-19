@@ -294,12 +294,14 @@
             font-size: 0.875rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            vertical-align: top;
         }
 
         .reports-table td {
             padding: 1rem;
             border-bottom: 1px solid #f1f5f9;
             color: #334155;
+            vertical-align: middle;
         }
 
         .reports-table tbody tr:hover {
@@ -589,6 +591,14 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.barangay') }}" class="nav-link">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Barangay
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('admin.solved') }}" class="nav-link active">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -659,7 +669,7 @@
             <table class="reports-table">
                 <thead>
                     <tr>
-                        <th>
+                        <th style="text-align: left; width: 150px; vertical-align: top;">
                             Disaster
                             <br>
                             <select class="disaster-type-select" id="adminDisasterFilter" onchange="filterAdminReports()">
@@ -669,19 +679,39 @@
                                 @endforeach
                             </select>
                         </th>
-                        <th>Description</th>
-                        <th>Date</th>
-                        <th>User</th>
-                        <th>Location</th>
-                        <th>Solved By</th>
-                        <th>Solved At</th>
-                        <th>Solved</th>
+                        <th style="text-align: left; width: 250px; vertical-align: top;">Description</th>
+                        <th style="text-align: left; width: 140px; vertical-align: top;">
+                            Date
+                            <br>
+                            <select class="disaster-type-select" id="dateFilter" onchange="filterByDate()">
+                                <option value="">All</option>
+                                <option value="january">January</option>
+                                <option value="february">February</option>
+                                <option value="march">March</option>
+                                <option value="april">April</option>
+                                <option value="may">May</option>
+                                <option value="june">June</option>
+                                <option value="july">July</option>
+                                <option value="august">August</option>
+                                <option value="september">September</option>
+                                <option value="october">October</option>
+                                <option value="november">November</option>
+                                <option value="december">December</option>
+                            </select>
+                        </th>
+                        <th style="text-align: left; width: 150px; vertical-align: top;">User</th>
+                        <th style="text-align: left; width: 200px; vertical-align: top;">Location</th>
+                        <th style="text-align: left; width: 120px; vertical-align: top;">Solved By</th>
+                        <th style="text-align: left; width: 150px; vertical-align: top;">Solved At</th>
+                        <th style="text-align: center; width: 120px; vertical-align: top;">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if($solvedReports->count() > 0)
                         @foreach($solvedReports as $solved)
-                        <tr class="report-row" data-disaster-type="{{ $solved->report->disaster_type }}">
+                        <tr class="report-row" 
+                            data-disaster-type="{{ $solved->report->disaster_type }}"
+                            data-report-date="{{ $solved->report->created_at->toISOString() }}">
                             <td>
                                 <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
                                     {{ ucfirst($solved->report->disaster_type) }}
@@ -699,9 +729,9 @@
                             </td>
                             <td>{{ $solved->admin->name }}</td>
                             <td>{{ $solved->solved_at->format('M d, Y h:i A') }}</td>
-                            <td>
+                            <td style="text-align: center;">
                                 <span style="background: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
-                                    Solved
+                                    ✓ Solved
                                 </span>
                             </td>
                         </tr>
@@ -781,16 +811,38 @@
         // Filter reports by disaster type
         function filterAdminReports() {
             const filterValue = document.getElementById('adminDisasterFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
             const rows = document.querySelectorAll('.report-row');
             
             rows.forEach(row => {
                 const disasterType = row.getAttribute('data-disaster-type');
-                if (filterValue === '' || disasterType === filterValue) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+                const reportDate = row.getAttribute('data-report-date');
+                
+                let showRow = true;
+                
+                // Filter by disaster type
+                if (filterValue !== '' && disasterType !== filterValue) {
+                    showRow = false;
                 }
+                
+                // Filter by month
+                if (dateFilter !== '' && reportDate) {
+                    const rowDate = new Date(reportDate);
+                    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                                      'july', 'august', 'september', 'october', 'november', 'december'];
+                    const reportMonth = monthNames[rowDate.getMonth()];
+                    
+                    if (reportMonth !== dateFilter) {
+                        showRow = false;
+                    }
+                }
+                
+                row.style.display = showRow ? '' : 'none';
             });
+        }
+        
+        function filterByDate() {
+            filterAdminReports();
         }
 
         // Poll for new reports every 5 seconds

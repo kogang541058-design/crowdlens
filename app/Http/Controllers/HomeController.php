@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class HomeController extends Controller
 {
@@ -47,9 +49,10 @@ class HomeController extends Controller
             ->latest()
             ->get();
         
-        // Get all verified reports to show on map
+        // Get all verified reports to show on map (excluding solved ones)
         $verifiedReports = \App\Models\Report::with('user')
             ->where('status', 'verified')
+            ->whereDoesntHave('solved')
             ->orderBy('created_at', 'desc')
             ->get();
         
@@ -57,8 +60,11 @@ class HomeController extends Controller
         $disasterTypes = \App\Models\DisasterType::where('is_active', true)
             ->orderBy('name')
             ->get();
+
+        // Get all barangays for the report form
+        $barangays = \App\Models\Barangay::orderBy('name')->get();
         
-        return view('dashboard', compact('reports', 'verifiedReports', 'disasterTypes'));
+        return view('dashboard', compact('reports', 'verifiedReports', 'disasterTypes', 'barangays'));
     }
 
     /**
@@ -107,5 +113,67 @@ class HomeController extends Controller
             'latest_response' => $latestResponse,
             'new_count' => $newResponses->count()
         ]);
+    }
+
+    /**
+     * Show the settings page.
+     */
+    public function settings()
+    {
+        return view('settings');
+    }
+
+    /**
+     * Update user profile (name and email).
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+        
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+        ]);
+        
+        $user->update($validated);
+        
+        return back()->with('success', 'Profile updated successfully!');
+    }
+
+    /**
+     * Update user password.
+     */
+    public function updatePassword(Request $request)
+    {
+        $user = auth()->user();
+        
+        $validated = $request->validate([
+            'current_password' => ['required'],
+            'new_password' => [
+                'required',
+                'confirmed',
+                'min:8',
+                'regex:/[!@#$%^&*(),.?":{}|<>]/'
+            ],
+        ], [
+            'current_password.required' => 'Please provide your current password.',
+            'new_password.required' => 'Please provide a new password.',
+            'new_password.min' => 'Password must be at least 8 characters long.',
+            'new_password.confirmed' => 'Password confirmation does not match.',
+            'new_password.regex' => 'Password must contain at least one special character (!@#$%^&*(),.?":{}|<>).'
+        ]);
+        
+        // Check if current password is correct
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+        
+        $user->update([
+            'password' => $validated['new_password']
+        ]);
+        
+        return back()->with('success', 'Password changed successfully!');
     }
 }

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\BarangayAuthController;
 
 use App\Http\Controllers\ReportController;
 
@@ -35,6 +36,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/user/check-responses', [HomeController::class, 'checkResponses'])->name('user.check-responses');
+    
+    // User settings routes
+    Route::get('/settings', [HomeController::class, 'settings'])->name('settings');
+    Route::put('/settings/profile', [HomeController::class, 'updateProfile'])->name('settings.profile');
+    Route::put('/settings/password', [HomeController::class, 'updatePassword'])->name('settings.password');
 });
 
 // Admin routes
@@ -47,6 +53,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reports/count', [AdminAuthController::class, 'getReportCount'])->name('reports.count');
         Route::get('/reports/new', [AdminAuthController::class, 'getNewReports'])->name('reports.new');
         Route::get('/reports/check-new', [AdminAuthController::class, 'checkNewReports'])->name('reports.check-new');
+        Route::get('/reports/barangay-updates', [AdminAuthController::class, 'pollBarangayUpdates'])->name('reports.barangay-updates');
         Route::get('/notifications', [AdminAuthController::class, 'getNotifications'])->name('notifications.get');
         Route::post('/notifications/{id}/read', [AdminAuthController::class, 'markNotificationRead'])->name('notifications.read');
         Route::post('/notifications/read-all', [AdminAuthController::class, 'markAllNotificationsRead'])->name('notifications.read-all');
@@ -56,7 +63,26 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::delete('/reports/{report}', [AdminAuthController::class, 'deleteReport'])->name('reports.delete');
         Route::get('/users', [AdminAuthController::class, 'users'])->name('users');
+        Route::post('/users', [AdminAuthController::class, 'storeUser'])->name('users.store');
+        Route::put('/users/{user}', [AdminAuthController::class, 'updateUser'])->name('users.update');
+        Route::patch('/users/{user}/block', [AdminAuthController::class, 'blockUser'])->name('users.block');
+        Route::get('/barangay', [AdminAuthController::class, 'barangay'])->name('barangay');
+        Route::post('/barangay', [AdminAuthController::class, 'storeBarangay'])->name('barangay.store');
+        Route::put('/barangay/{id}', [AdminAuthController::class, 'updateBarangay'])->name('barangay.update');
+        Route::delete('/barangay/{id}', [AdminAuthController::class, 'deleteBarangay'])->name('barangay.delete');
         Route::get('/solved', [AdminAuthController::class, 'solved'])->name('solved');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+    });
+});
+
+// Barangay routes
+Route::prefix('barangay')->name('barangay.')->group(function () {
+    // Protected barangay routes
+    Route::middleware(['auth:barangay'])->group(function () {
+        Route::get('/dashboard', [BarangayAuthController::class, 'dashboard'])->name('dashboard');
+        Route::get('/reports', [BarangayAuthController::class, 'reports'])->name('reports');
+        Route::get('/reports/poll', [BarangayAuthController::class, 'pollReports'])->name('reports.poll');
+        Route::post('/reports/{report}/action', [BarangayAuthController::class, 'updateActionStatus'])->name('reports.action');
+        Route::post('/logout', [BarangayAuthController::class, 'logout'])->name('logout');
     });
 });

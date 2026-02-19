@@ -11,6 +11,8 @@ class Report extends Model
 
     protected $fillable = [
         'user_id',
+        'barangay_id',
+        'barangay_action_status',
         'disaster_type',
         'description',
         'latitude',
@@ -27,6 +29,14 @@ class Report extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the barangay assigned to this report.
+     */
+    public function barangay()
+    {
+        return $this->belongsTo(\App\Models\Barangay::class);
     }
 
     /**

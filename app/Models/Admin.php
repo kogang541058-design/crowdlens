@@ -19,6 +19,7 @@ class Admin extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -41,5 +42,21 @@ class Admin extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Check if admin is super admin.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    /**
+     * Check if admin is regular admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

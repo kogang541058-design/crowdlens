@@ -19,10 +19,11 @@ class ReportController extends Controller
     {
         $validated = $request->validate([
             'disaster_type' => 'required|string',
-            'description' => 'required|string|max:1000',
+            'description' => 'required|string|max:200',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'location' => 'nullable|string',
+            'barangay_id' => 'required|exists:barangays,id',
             'image' => 'nullable|image|max:10240', // 10MB max
             'video' => 'nullable|mimetypes:video/*|max:204800', // 200MB max
         ]);

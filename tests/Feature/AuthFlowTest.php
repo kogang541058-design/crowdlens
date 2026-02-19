@@ -15,8 +15,8 @@ class AuthFlowTest extends TestCase
         $response = $this->post('/register', [
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+            'password' => 'secret123!',
+            'password_confirmation' => 'secret123!',
         ]);
 
         $response->assertRedirect('/dashboard');
@@ -51,7 +51,7 @@ class AuthFlowTest extends TestCase
             'password' => 'wrong',
         ]);
 
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('password');
         $this->assertGuest();
     }
 }
