@@ -54,4 +54,9 @@ class Report extends Model
     {
         return $this->hasMany(ReportResponse::class);
     }
+
+    public function prediction()
+    {
+        return $this->hasOne(Prediction::class);
+    }
 }

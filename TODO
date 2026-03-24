@@ -1,0 +1,14 @@
+Retrain Model after
+    - Deescription Column
+    - Include Disaster Type
+
+Weights
+    - Longitude         - ??%
+    - Latitude          - 
+    - Description       - 
+    - Date              - 
+    - Disaster Type     - 
+
+
+UI:
+    - Dashboard, add square for AI Performance

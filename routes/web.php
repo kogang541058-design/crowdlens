@@ -5,8 +5,9 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\BarangayAuthController;
-
 use App\Http\Controllers\ReportController;
+use App\Models\Report;
+use App\Jobs\ProcessPrediction;
 
 // Public home with Login & Register forms
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -72,7 +73,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/barangay/{id}', [AdminAuthController::class, 'deleteBarangay'])->name('barangay.delete');
         Route::get('/solved', [AdminAuthController::class, 'solved'])->name('solved');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+
+        Route::post('/reports/{report}/run-ai', function (Report $report) {
+            ProcessPrediction::dispatch($report);
+            return response()->json(['message' => 'AI validation started in the background.']);
+        })->name('reports.run-ai'); 
     });
+
 });
 
 // Barangay routes
