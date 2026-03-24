@@ -89,11 +89,18 @@ class AdminAuthController extends Controller
      */
     public function reports()
     {
-        $reports = \App\Models\Report::with(['user', 'solved', 'responses', 'barangay'])
+        // $reports = \App\Models\Report::with(['user', 'solved', 'responses', 'barangay'])
+        //     ->whereIn('status', ['pending', 'verified', 'unverified'])
+        //     ->whereDoesntHave('solved')
+        //     ->orderBy('created_at', 'desc')
+        //     ->get();
+
+        $reports = \App\Models\Report::with(['user', 'solved', 'responses', 'barangay', 'prediction'])
             ->whereIn('status', ['pending', 'verified', 'unverified'])
             ->whereDoesntHave('solved')
             ->orderBy('created_at', 'desc')
             ->get();
+
         $disasterTypes = \App\Models\DisasterType::where('is_active', true)->orderBy('name')->get();
         return view('admin.reports', compact('reports', 'disasterTypes'));
     }

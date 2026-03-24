@@ -874,6 +874,8 @@
                         <th style="width: 90px; vertical-align: top;">Time</th>
                         <th style="width: 150px; vertical-align: top;">User</th>
                         <th style="width: 200px; vertical-align: top;">Location</th>
+                        <th style="width: 150px; vertical-align: top;">Prediction</th>
+                        <th style="width: 200px; vertical-align: top;">Confidence</th>
                         <th style="width: 140px; vertical-align: top;">
                             Status
                             <br>
@@ -950,6 +952,24 @@
                                 @else
                                     {{ number_format($report->latitude, 6) }}, {{ number_format($report->longitude, 6) }}
                                 @endif
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <span>
+                                        {{ $report->prediction ? ($report->prediction->prediction_label == 1 ? '✅ Valid' : '❌ Invalid') : '⏳ Pending...' }}
+                                    </span>
+                                    
+                                    <button 
+                                        onclick="runAiPrediction(event, {{ $report->id }})" 
+                                        id="ai-btn-{{ $report->id }}"
+                                        style="background: #6366f1; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;"
+                                    >
+                                        {{ $report->prediction ? 'Re-run AI' : 'Run AI' }}
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                {{ $report->prediction ? number_format($report->prediction->confidence_score * 100, 1) . '%' : '-' }}
                             </td>
                             <td>
                                 @if($report->status === 'pending')
@@ -2227,6 +2247,40 @@
                 }, 100);
             }
         };
+
+        function runAiPrediction(event, reportId) {
+            event.stopPropagation(); // Prevents the row click event if you have one
+            
+            const btn = document.getElementById(`ai-btn-${reportId}`);
+            const originalText = btn.innerText;
+            const url = "{{ route('admin.reports.run-ai', ':id') }}".replace(':id', reportId);
+
+            // UI Feedback: Disable and show loading
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+            btn.style.opacity = '0.7';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                // Optional: Reload after a short delay to see results
+                setTimeout(() => location.reload(), 2000); 
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                btn.disabled = false;
+                btn.innerText = originalText;
+                alert('Failed to start AI processing.');
+            });
+        }
     </script>
 </body>
 </html>
