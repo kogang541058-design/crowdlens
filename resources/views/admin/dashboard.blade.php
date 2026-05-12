@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Admin Portal</title>
     
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -376,6 +379,38 @@
             }
         }
 
+        /* Analytics Section */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+            max-width: 100%;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .chart-card h2 {
+            color: #1e293b;
+            margin: 0 0 1.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
     </style>
 </head>
 <body>
@@ -548,6 +583,33 @@
                 </div>
                 <div class="stat-value">{{ $totalUsers }}</div>
                 <div class="stat-label">Registered Users</div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="analytics-grid">
+            <!-- Monthly Analytics Chart -->
+            <div class="chart-card">
+                <h2>📊 Monthly Analytics</h2>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Report Status Analytics Chart -->
+            <div class="chart-card">
+                <h2>📈 Report Status Analytics</h2>
+                <div class="chart-wrapper">
+                    <canvas id="reportChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Disaster Type Analytics Chart -->
+            <div class="chart-card">
+                <h2>⚠️ Disaster Type Analytics</h2>
+                <div class="chart-wrapper">
+                    <canvas id="disasterChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -825,6 +887,136 @@
         // Check immediately and then every 5 seconds
         checkNewReports();
         setInterval(checkNewReports, 5000);
+
+        // Initialize Analytics Charts
+        function initCharts() {
+            // Monthly Analytics - Line Chart
+            const monthlyCtx = document.getElementById('monthlyChart');
+            if (monthlyCtx) {
+                new Chart(monthlyCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: {!! json_encode($monthlyLabels ?? []) !!},
+                        datasets: [{
+                            label: 'Reports Submitted',
+                            data: {!! json_encode($monthlyData ?? []) !!},
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#64748b', font: { size: 12 } }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#e2e8f0' },
+                                ticks: { color: '#64748b' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Report Status Analytics - Pie Chart
+            const reportCtx = document.getElementById('reportChart');
+            if (reportCtx) {
+                new Chart(reportCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pending', 'Verified', 'Solved'],
+                        datasets: [{
+                            data: {!! json_encode([$pendingReports, $verifiedReports, $solvedReports]) !!},
+                            backgroundColor: [
+                                '#f59e0b',
+                                '#10b981',
+                                '#8b5cf6'
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: { color: '#64748b', font: { size: 12 }, padding: 15 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Disaster Type Analytics - Bar Chart
+            const disasterCtx = document.getElementById('disasterChart');
+            if (disasterCtx) {
+                new Chart(disasterCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: {!! json_encode($disasterLabels ?? []) !!},
+                        datasets: [{
+                            label: 'Number of Reports',
+                            data: {!! json_encode($disasterChartData ?? []) !!},
+                            backgroundColor: [
+                                '#3b82f6',
+                                '#ef4444',
+                                '#f59e0b',
+                                '#8b5cf6',
+                                '#10b981',
+                                '#06b6d4'
+                            ],
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#64748b', font: { size: 12 } }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: '#e2e8f0' },
+                                ticks: { color: '#64748b' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Initialize charts when page loads
+        document.addEventListener('DOMContentLoaded', initCharts);
     </script>
 </body>
 </html>

@@ -15,81 +15,118 @@
                 margin: 0;
                 font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
                 color: #1b1b18;
-                background: radial-gradient(1500px 600px at 50% -10%, #ffe677 0%, #ffd24d 30%, #ffb83b 55%, #ff9f2d 75%, #ff8a26 100%);
+                background: url('{{ asset("images/Background.png") }}') center/cover no-repeat fixed;
                 position: relative;
                 min-height: 100%;
-                overflow-x: hidden;
-            }
-            /* Animated background shapes */
-            body::before, body::after {
-                content: '';
-                position: absolute;
-                border-radius: 50%;
-                opacity: .08;
-                pointer-events: none;
-                animation: float 20s ease-in-out infinite;
-            }
-            body::before {
-                width: 400px;
-                height: 400px;
-                background: radial-gradient(circle, rgba(255,255,255,.5) 0%, transparent 70%);
-                top: -100px;
-                left: -100px;
-                animation-delay: -5s;
-            }
-            body::after {
-                width: 600px;
-                height: 600px;
-                background: radial-gradient(circle, rgba(255,255,255,.3) 0%, transparent 70%);
-                bottom: -200px;
-                right: -200px;
-                animation-delay: -10s;
-            }
-            @keyframes float {
-                0%, 100% { transform: translate(0, 0) scale(1); }
-                33% { transform: translate(30px, -30px) scale(1.1); }
-                66% { transform: translate(-20px, 20px) scale(0.9); }
+                overflow-x: auto;
             }
             .hero { 
                 display:flex; 
                 align-items:center; 
-                justify-content:center; 
-                min-height:100%; 
-                padding: 2rem; 
-                text-align:center;
+                justify-content:space-between; 
+                min-height:100vh;
+                padding: 3rem 4rem; 
                 position: relative;
                 z-index: 1;
+                max-width: 1600px;
+                margin: 0 auto;
+                gap: 6rem;
             }
             .hero-content {
                 animation: fadeInUp 0.8s ease-out;
+                flex: 1;
+                text-align: left;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .hero-sidebar {
+                flex: 0 0 auto;
+                display: flex;
+                gap: 1.5rem;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+            }
+            .action-cards {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1.25rem;
+                margin: 2.5rem 0;
+                max-width: 350px;
+            }
+            .action-card {
+                background: #fff;
+                border-radius: 14px;
+                padding: 1.5rem;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: .75rem;
+                box-shadow: 0 4px 12px rgba(0,0,0,.08);
+                transition: all 0.3s ease;
+                animation: fadeInUp 0.8s ease-out backwards;
+            }
+            .action-card:nth-child(1) { animation-delay: 0.4s; }
+            .action-card:nth-child(2) { animation-delay: 0.45s; }
+            .action-card:nth-child(3) { animation-delay: 0.5s; }
+            .action-card:nth-child(4) { animation-delay: 0.55s; }
+            .action-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0,0,0,.12);
+            }
+            .action-card-icon {
+                width: 48px;
+                height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                color: #FF9500;
+            }
+            .action-card-icon svg {
+                stroke: #FF9500;
+            }
+            .action-card-label {
+                font-size: .85rem;
+                font-weight: 600;
+                color: #1a1a1a;
+                line-height: 1.3;
             }
             @keyframes fadeInUp {
                 from { opacity: 0; transform: translateY(30px); }
                 to { opacity: 1; transform: translateY(0); }
             }
             .eyebrow { 
-                letter-spacing:.25em; 
-                font-size:.75rem; 
-                opacity:.75; 
-                margin-bottom:1.25rem; 
-                font-weight: 600;
+                letter-spacing:.2em; 
+                font-size:.7rem; 
+                opacity:.7; 
+                margin-bottom:1rem; 
+                font-weight: 700;
                 text-transform: uppercase;
                 animation: fadeInUp 0.8s ease-out 0.1s backwards;
+                text-align: left;
             }
             h1 { 
-                font-size: clamp(2.25rem, 6vw, 4rem); 
+                font-size: clamp(2.8rem, 5vw, 3.5rem); 
                 line-height:1.1; 
-                margin: 0 0 1.25rem 0; 
+                margin: 0 0 .5rem 0; 
                 font-weight: 900;
                 letter-spacing: -0.02em;
                 animation: fadeInUp 0.8s ease-out 0.2s backwards;
             }
+            .subtitle {
+                font-size: .9rem;
+                color: #6b7280;
+                margin: 0 0 2rem 0;
+                animation: fadeInUp 0.8s ease-out 0.25s backwards;
+            }
             p { 
-                max-width: 48rem; 
-                margin: 0 auto 2.5rem auto; 
-                font-size: 1.125rem; 
-                line-height: 1.75; 
-                opacity:.92;
+                margin: 0; 
+                font-size: .95rem; 
+                line-height: 1.6; 
+                opacity:.88;
                 font-weight: 400;
                 animation: fadeInUp 0.8s ease-out 0.3s backwards;
             }
@@ -97,17 +134,18 @@
                 display:inline-flex; 
                 align-items:center; 
                 justify-content:center; 
-                gap:.5rem; 
-                padding:1rem 2.5rem; 
-                border-radius: 9999px; 
+                gap:.4rem; 
+                padding:.85rem 1.5rem; 
+                border-radius: 10px; 
                 border: none; 
                 cursor: pointer; 
                 background: var(--accent); 
                 color: #fff; 
                 font-weight: 700;
-                font-size: 1.05rem;
-                box-shadow: 0 10px 25px rgba(47,111,237,.35), 0 4px 10px rgba(47,111,237,.2);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-size: .95rem;
+                width: 100%;
+                box-shadow: 0 4px 16px rgba(47,111,237,.25), 0 2px 6px rgba(47,111,237,.15);
+                transition: all 0.25s ease;
                 position: relative;
                 overflow: hidden;
                 animation: fadeInUp 0.8s ease-out 0.4s backwards;
@@ -120,26 +158,26 @@
                 width: 0;
                 height: 0;
                 border-radius: 50%;
-                background: rgba(255,255,255,.2);
+                background: rgba(255,255,255,.15);
                 transform: translate(-50%, -50%);
-                transition: width 0.6s, height 0.6s;
+                transition: width 0.4s, height 0.4s;
             }
             .btn:hover::before {
-                width: 300px;
-                height: 300px;
+                width: 250px;
+                height: 250px;
             }
             .btn:hover { 
-                transform: translateY(-2px); 
-                box-shadow: 0 15px 35px rgba(47,111,237,.4), 0 5px 15px rgba(47,111,237,.25);
+                transform: translateY(-1px); 
+                box-shadow: 0 6px 24px rgba(47,111,237,.3), 0 3px 8px rgba(47,111,237,.18);
                 background: var(--accent-hover);
             }
             .btn:active { 
                 transform: translateY(0); 
-                box-shadow: 0 5px 15px rgba(47,111,237,.3);
+                box-shadow: 0 3px 12px rgba(47,111,237,.25);
             }
             .btn:focus { 
-                outline: 3px solid rgba(47,111,237,.4); 
-                outline-offset: 3px; 
+                outline: 2px solid rgba(47,111,237,.4); 
+                outline-offset: 2px; 
             }
             .link { 
                 color: #0b57d0; 
@@ -160,64 +198,97 @@
                 font-size: 1rem;
                 animation: fadeInUp 0.8s ease-out 0.5s backwards;
             }
-            dialog { 
-                border: none; 
-                border-radius: 20px; 
+            .form-card { 
+                border-radius: 16px; 
                 padding: 0; 
-                box-shadow: 0 25px 80px rgba(0,0,0,.3), 0 0 1px rgba(0,0,0,.1); 
-                width: 95%; 
-                max-width: 440px;
-                animation: modalFadeIn 0.3s ease-out;
+                box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 0 1px rgba(0,0,0,.05); 
+                width: 420px;
+                animation: fadeInUp 0.8s ease-out 0.4s backwards;
             }
-            dialog::backdrop {
-                background: rgba(0,0,0,.6);
-                backdrop-filter: blur(4px);
-                animation: backdropFadeIn 0.3s ease-out;
-            }
-            @keyframes modalFadeIn {
-                from { opacity: 0; transform: scale(0.9) translateY(20px); }
-                to { opacity: 1; transform: scale(1) translateY(0); }
-            }
-            @keyframes backdropFadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
+            dialog { 
+                display: none !important;
             }
             .card { 
                 padding: 2rem; 
                 background: #fff; 
-                border-radius: 20px; 
+                border-radius: 16px; 
+            }
+            .card-logo {
+                width: 56px;
+                height: 56px;
+                margin: 0 auto 1.25rem;
+                display: block;
             }
             .card h3 { 
-                margin: 0 0 1.5rem 0; 
-                font-size: 1.5rem;
+                margin: 0 0 .5rem 0; 
+                font-size: 1.35rem;
                 font-weight: 700;
                 color: #1a1a1a;
+                text-align: center;
+            }
+            .card-subtitle {
+                text-align: center;
+                font-size: .9rem;
+                color: #6b7280;
+                margin: 0 0 1.5rem 0;
             }
             .field { 
-                margin-bottom: 1.25rem; 
+                margin-bottom: 1.1rem; 
                 text-align:left; 
+                position: relative;
+            }
+            .field svg {
+                position: absolute;
+                left: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 20px;
+                height: 20px;
+                color: #6b7280;
+                pointer-events: none;
+                flex-shrink: 0;
+            }
+            .field .toggle-password {
+                position: absolute;
+                right: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                cursor: pointer;
+                color: #6b7280;
+                background: none;
+                border: none;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: color 0.2s;
+            }
+            .field .toggle-password:hover {
+                color: #374151;
+            }
+            .field .toggle-password svg {
+                width: 20px;
+                height: 20px;
             }
             .label { 
-                display:block; 
-                font-size:.95rem; 
-                margin-bottom:.5rem;
-                font-weight: 600;
-                color: #374151;
+                display:none;
             }
             .input { 
                 width:100%; 
-                padding:.85rem 1rem; 
-                border-radius:12px; 
-                border:2px solid #e5e7eb; 
-                font-size:1rem;
+                padding:.85rem 1rem .85rem 2.75rem; 
+                border-radius:10px; 
+                border:1.5px solid #e5e7eb; 
+                font-size:.95rem;
                 transition: all 0.2s;
-                background: #fafafa;
+                background: #f8f9fa;
             }
             .input:focus {
                 outline: none;
                 border-color: var(--accent);
                 background: #fff;
-                box-shadow: 0 0 0 3px rgba(47,111,237,.1);
+                box-shadow: 0 0 0 2px rgba(47,111,237,.08);
             }
             .input:hover {
                 border-color: #d1d5db;
@@ -226,23 +297,11 @@
                 display:flex; 
                 align-items:center; 
                 justify-content:space-between; 
-                gap:1rem;
-                margin-top: 1.5rem;
+                gap:.75rem;
+                margin-top: 1.25rem;
             }
             .close { 
-                background:none; 
-                border:none; 
-                font-size:1.75rem; 
-                line-height:1; 
-                cursor:pointer;
-                color: #6b7280;
-                transition: all 0.2s;
-                width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 8px;
+                display: none;
             }
             .close:hover {
                 background: #f3f4f6;
@@ -250,30 +309,30 @@
             }
             .error-msg {
                 color:#dc2626;
-                font-size:.9rem;
-                margin-top: .4rem;
+                font-size:.8rem;
+                margin-top: .3rem;
                 font-weight: 500;
             }
             .error-banner {
                 background: #fef2f2;
                 border: 1px solid #fecaca;
                 color: #991b1b;
-                padding: .75rem 1rem;
-                border-radius: 10px;
-                margin-bottom: 1rem;
-                font-size: .95rem;
+                padding: .65rem .9rem;
+                border-radius: 8px;
+                margin-bottom: .85rem;
+                font-size: .85rem;
             }
             .checkbox-label {
                 display: inline-flex;
                 align-items: center;
-                gap: .5rem;
-                font-size: .95rem;
+                gap: .4rem;
+                font-size: .85rem;
                 cursor: pointer;
-                color: #4b5563;
+                color: #6b7280;
             }
             input[type="checkbox"] {
-                width: 18px;
-                height: 18px;
+                width: 16px;
+                height: 16px;
                 cursor: pointer;
             }
             .btn-register {
@@ -287,38 +346,52 @@
             .btn-register:focus {
                 outline-color: rgba(16,185,129,.4);
             }
+            @media (max-width: 1024px) {
+                .hero {
+                    flex-direction: column;
+                    text-align: center;
+                    padding: 2rem;
+                    gap: 2rem;
+                }
+                .hero-content {
+                    text-align: center;
+                    max-width: 100%;
+                }
+                .eyebrow {
+                    text-align: center;
+                }
+                .hero-sidebar {
+                    width: 100%;
+                    justify-content: center;
+                    margin-top: 1rem;
+                    gap: 1rem;
+                }
+                .form-card {
+                    width: 300px;
+                }
+            }
         </style>
     </head>
     <body>
         <main class="hero">
             <div class="hero-content">
                 <div class="eyebrow">DAVAO CITY REPORTS</div>
-                <h1>Davao City Reports</h1>
+                <h1>CROWDLENS</h1>
+                <div class="subtitle">Sign in to continue to CrowdLens</div>
                 <p>
                     Davao City Reports is the official complaint and appreciation page of The City Government of Davao.
                     It is a platform designed to address complaints, requests, and inquiries submitted via text, call, email,
                     and Facebook within Davao City.
                 </p>
-
-                <button type="button" class="btn" onclick="document.getElementById('loginDialog').showModal()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3"/>
-                    </svg>
-                    Login
-                </button>
-                <div class="muted">
-                    <a href="#" class="link" onclick="document.getElementById('registerDialog').showModal(); return false;">Not yet registered? Click Here</a>
-                </div>
             </div>
-        </main>
 
-        <!-- Login modal -->
-        <dialog id="loginDialog">
-            <form method="dialog" style="position:absolute; right:12px; top:12px; z-index:10;">
-                <button class="close" aria-label="Close">×</button>
-            </form>
+            <div class="hero-sidebar">
+                <!-- Login Form -->
+                <div class="form-card" id="loginForm">
             <div class="card">
+                <img src="{{ asset('images/img.png') }}" alt="Logo" class="card-logo">
                 <h3>Welcome back</h3>
+                <div class="card-subtitle">Sign in to continue to CrowdLens</div>
                 @if (($errors->has('email') || $errors->has('password')) && old('_form') === 'login')
                     <div class="error-banner">
                         @if($errors->has('email'))
@@ -332,33 +405,47 @@
                     @csrf
                     <input type="hidden" name="_form" value="login" />
                     <div class="field">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
                         <label class="label" for="login_email">Email or Username</label>
                         <input id="login_email" name="email" type="text" value="{{ old('email') }}" class="input" placeholder="your@email.com or username" />
                     </div>
                     <div class="field">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <label class="label" for="login_password">Password</label>
                         <input id="login_password" name="password" type="password" class="input" placeholder="••••••••" />
+                        <button type="button" class="toggle-password" onclick="const input = document.getElementById('login_password'); input.type = input.type === 'password' ? 'text' : 'password'; this.classList.toggle('active');">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
                     </div>
-                    <div class="row" style="margin-top:1rem; margin-bottom:0;">
+                    <div class="forgot-password">
+                        <a href="#">Forgot password?</a>
+                    </div>
+                    <div class="row" style="margin-top:1.5rem; margin-bottom:0; justify-content: space-between;">
                         <label class="checkbox-label">
                             <input type="checkbox" name="remember"> Remember me
                         </label>
-                        <button type="submit" class="btn">
-                            Log in
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 12h14M12 5l7 7-7 7"/>
-                            </svg>
-                        </button>
                     </div>
+                    <button type="submit" class="btn" style="margin-top: 1.5rem;">
+                        Log in
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
                 </form>
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <p style="margin: 0 0 1rem 0; font-size: .85rem; color: #6b7280;">or</p>
+                    <button type="button" onclick="document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block';" class="btn" style="background: #10b981; box-shadow: 0 4px 16px rgba(16,185,129,.25), 0 2px 6px rgba(16,185,129,.15); text-decoration: none; cursor: pointer;">
+                        Create an account
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </dialog>
+            </div>
 
-        <!-- Register modal -->
-        <dialog id="registerDialog">
-            <form method="dialog" style="position:absolute; right:12px; top:12px; z-index:10;">
-                <button class="close" aria-label="Close">×</button>
-            </form>
+            <!-- Register Form -->
+            <div class="form-card" style="display: none;" id="registerForm">
             <div class="card">
                 <h3>Create your account</h3>
                 @if ($errors->any() && old('_form') === 'register')
@@ -380,18 +467,26 @@
                         @error('email')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <div class="field">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <label class="label" for="password">Password</label>
                         <input id="password" name="password" type="password" class="input" placeholder="••••••••" />
+                        <button type="button" class="toggle-password" onclick="const input = document.getElementById('password'); input.type = input.type === 'password' ? 'text' : 'password'; this.classList.toggle('active');">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
                         @error('password')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <div class="field">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <label class="label" for="password_confirmation">Confirm password</label>
                         <input id="password_confirmation" name="password_confirmation" type="password" class="input" placeholder="••••••••" />
+                        <button type="button" class="toggle-password" onclick="const input = document.getElementById('password_confirmation'); input.type = input.type === 'password' ? 'text' : 'password'; this.classList.toggle('active');">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
                         @error('password_confirmation')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
-                    <div class="row">
-                        <span></span>
-                        <button type="submit" class="btn btn-register">
+                    <div class="row" style="justify-content: space-between;">
+                        <button type="button" onclick="document.getElementById('registerForm').style.display='none'; document.getElementById('loginForm').style.display='block';" style="background: transparent; color: #6b7280; border: none; cursor: pointer; font-size: .85rem; font-weight: 600;">← Back to Login</button>
+                        <button type="submit" class="btn" style="background: #10b981; box-shadow: 0 4px 16px rgba(16,185,129,.25), 0 2px 6px rgba(16,185,129,.15);">
                             Create account
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -400,16 +495,17 @@
                     </div>
                 </form>
             </div>
-        </dialog>
+                </div>
+            </div>
+        </main>
 
         <script>
-            // Auto-open the relevant dialog if validation failed
+            // Show register form if validation errors exist
             (function(){
                 const which = @json(old('_form'));
-                if (which === 'login') {
-                    document.getElementById('loginDialog').showModal();
-                } else if (which === 'register') {
-                    document.getElementById('registerDialog').showModal();
+                if (which === 'register') {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('registerForm').style.display = 'block';
                 }
             })();
         </script>

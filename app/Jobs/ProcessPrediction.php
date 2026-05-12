@@ -25,8 +25,6 @@ class ProcessPrediction implements ShouldQueue
 
     public function handle(): void
     {
-        sleep(2);
-
         $url = config('services.ai_model.url');
         $key = config('services.ai_model.key');
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class AdminAuthController extends Controller
 {
@@ -67,7 +68,41 @@ class AdminAuthController extends Controller
         $unsolvedReports = \App\Models\Report::where('status', 'pending')->count();
         $totalAdmins = \App\Models\Admin::count();
         
-        return view('admin.dashboard', compact('totalUsers', 'totalReports', 'pendingReports', 'verifiedReports', 'solvedReports', 'unsolvedReports', 'totalAdmins'));
+        // Get monthly data for charts (last 12 months)
+        $monthlyLabels = [];
+        $monthlyData = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+            $monthlyLabels[] = $date->format('M');
+            $count = \App\Models\Report::whereMonth('created_at', $date->month)
+                ->whereYear('created_at', $date->year)
+                ->count();
+            $monthlyData[] = $count;
+        }
+        
+        // Get disaster type data
+        $disasterCounts = \App\Models\Report::selectRaw('disaster_type, COUNT(*) as count')
+            ->groupBy('disaster_type')
+            ->orderByDesc('count')
+            ->limit(6)
+            ->get();
+        
+        $disasterLabels = $disasterCounts->pluck('disaster_type')->toArray();
+        $disasterChartData = $disasterCounts->pluck('count')->toArray();
+        
+        return view('admin.dashboard', compact(
+            'totalUsers',
+            'totalReports',
+            'pendingReports',
+            'verifiedReports',
+            'solvedReports',
+            'unsolvedReports',
+            'totalAdmins',
+            'monthlyLabels',
+            'monthlyData',
+            'disasterLabels',
+            'disasterChartData'
+        ));
     }
 
     /**
