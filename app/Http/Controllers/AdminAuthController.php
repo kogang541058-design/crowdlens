@@ -90,6 +90,19 @@ class AdminAuthController extends Controller
         $disasterLabels = $disasterCounts->pluck('disaster_type')->toArray();
         $disasterChartData = $disasterCounts->pluck('count')->toArray();
         
+        // Get barangay reports data
+        $barangayCounts = \App\Models\Report::selectRaw('barangay_id, COUNT(*) as count')
+            ->with('barangay')
+            ->groupBy('barangay_id')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get();
+        
+        $barangayLabels = $barangayCounts->map(function($item) {
+            return $item->barangay ? $item->barangay->name : 'Unknown';
+        })->toArray();
+        $barangayChartData = $barangayCounts->pluck('count')->toArray();
+        
         return view('admin.dashboard', compact(
             'totalUsers',
             'totalReports',
@@ -101,7 +114,9 @@ class AdminAuthController extends Controller
             'monthlyLabels',
             'monthlyData',
             'disasterLabels',
-            'disasterChartData'
+            'disasterChartData',
+            'barangayLabels',
+            'barangayChartData'
         ));
     }
 

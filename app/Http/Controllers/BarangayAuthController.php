@@ -116,6 +116,15 @@ class BarangayAuthController extends Controller
             'barangay_action_status' => $validated['barangay_action_status'] === 'none' ? null : $validated['barangay_action_status'],
         ]);
 
+        // Return JSON for AJAX requests
+        if ($request->wantsJson() || $request->isXmlHttpRequest()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Barangay action status updated successfully.',
+                'status' => $validated['barangay_action_status'],
+            ]);
+        }
+
         return redirect()->route('barangay.reports')->with('success', 'Barangay action status updated successfully.');
     }
 }

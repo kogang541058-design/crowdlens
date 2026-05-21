@@ -21,7 +21,7 @@
 
         .sidebar {
             width: 260px;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
             color: white;
             padding: 2rem 0;
             position: fixed;
@@ -40,7 +40,7 @@
         }
 
         .sidebar-header p {
-            color: rgba(255, 255, 255, 0.8);
+            color: #94a3b8;
             font-size: 0.875rem;
         }
 
@@ -57,7 +57,7 @@
             display: flex;
             align-items: center;
             padding: 0.75rem 1.5rem;
-            color: rgba(255, 255, 255, 0.8);
+            color: #cbd5e1;
             text-decoration: none;
             transition: all 0.3s;
         }
@@ -68,9 +68,9 @@
         }
 
         .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(59, 130, 246, 0.2);
             color: white;
-            border-left: 3px solid white;
+            border-left: 3px solid #3b82f6;
         }
 
         .nav-link svg {
@@ -139,12 +139,17 @@
             border-radius: 12px;
             padding: 1.5rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
         }
 
         .stat-header {
             display: flex;
-            align-items: center;
-            gap: 1rem;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 1rem;
         }
 
@@ -164,15 +169,15 @@
         }
 
         .stat-icon.blue {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         }
 
         .stat-icon.orange {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
 
         .stat-icon.green {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
 
         .stat-value {
@@ -242,23 +247,6 @@
                         Reports
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                        Residents
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        Settings
-                    </a>
-                </li>
             </ul>
         </nav>
     </div>
@@ -279,46 +267,38 @@
             <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon blue">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                     </div>
-                    <div>
-                        <div class="stat-value">{{ $totalReports }}</div>
-                        <div class="stat-label">Total Reports</div>
-                    </div>
                 </div>
+                <div class="stat-value">{{ $totalReports }}</div>
+                <div class="stat-label">Total Reports</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon orange">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <div>
-                        <div class="stat-value">{{ $pendingReports }}</div>
-                        <div class="stat-label">Pending Reports</div>
-                    </div>
                 </div>
+                <div class="stat-value">{{ $pendingReports }}</div>
+                <div class="stat-label">Pending Reports</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-header">
                     <div class="stat-icon green">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <div>
-                        <div class="stat-value">{{ $resolvedReports }}</div>
-                        <div class="stat-label">Resolved Reports</div>
-                    </div>
                 </div>
+                <div class="stat-value">{{ $resolvedReports }}</div>
+                <div class="stat-label">Resolved Reports</div>
             </div>
-        </div>
-
         </div>
     </div>
 </body>

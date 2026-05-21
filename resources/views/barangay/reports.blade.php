@@ -21,7 +21,7 @@
         /* ── Sidebar ── */
         .sidebar {
             width: 260px;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
             color: white;
             padding: 2rem 0;
             position: fixed;
@@ -33,19 +33,19 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         .sidebar-header h2 { font-size: 1.5rem; margin-bottom: 0.25rem; }
-        .sidebar-header p  { color: rgba(255,255,255,0.8); font-size: 0.875rem; }
+        .sidebar-header p  { color: #94a3b8; font-size: 0.875rem; }
 
         .nav-menu { list-style: none; padding: 1.5rem 0; }
         .nav-item  { margin-bottom: 0.5rem; }
         .nav-link  {
             display: flex; align-items: center;
             padding: 0.75rem 1.5rem;
-            color: rgba(255,255,255,0.8);
+            color: #cbd5e1;
             text-decoration: none;
             transition: all 0.3s;
         }
         .nav-link:hover  { background: rgba(255,255,255,0.1); color: white; }
-        .nav-link.active { background: rgba(255,255,255,0.2); color: white; border-left: 3px solid white; }
+        .nav-link.active { background: rgba(59, 130, 246, 0.2); color: white; border-left: 3px solid #3b82f6; }
         .nav-link svg    { width: 20px; height: 20px; margin-right: 0.75rem; }
 
         /* ── Main ── */
@@ -95,7 +95,7 @@
             background: #f8fafc;
             cursor: pointer;
         }
-        .filter-select:focus { outline: none; border-color: #667eea; }
+        .filter-select:focus { outline: none; border-color: #3b82f6; }
 
         /* ── Notification Bell ── */
         .notification-bell-wrap { position: relative; }
@@ -140,7 +140,7 @@
         .notif-item:hover { background: #f9fafb; }
         .notif-icon {
             width: 38px; height: 38px; border-radius: 50%;
-            background: linear-gradient(135deg,#667eea,#764ba2);
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .notif-icon svg { width: 18px; height: 18px; color: white; }
@@ -162,9 +162,9 @@
             display: flex; gap: 0.75rem; align-items: center;
             z-index: 99999; max-width: 320px;
             animation: slideInRight 0.3s ease;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #3b82f6;
         }
-        .rt-toast svg { width: 22px; height: 22px; color: #667eea; flex-shrink: 0; }
+        .rt-toast svg { width: 22px; height: 22px; color: #3b82f6; flex-shrink: 0; }
         .rt-toast strong { display: block; color: #111827; font-size: 0.875rem; }
         .rt-toast small { color: #6b7280; font-size: 0.8rem; }
 
@@ -412,7 +412,7 @@
                         data-image="{{ $report->image ? Storage::url($report->image) : '' }}"
                         data-video="{{ $report->video ? Storage::url($report->video) : '' }}"
                         style="cursor:pointer;"
-                        onclick="openModal(this)">
+                        onclick="openModalWrapper(this)">
                         <td><span class="badge badge-disaster">{{ ucfirst($report->disaster_type) }}</span></td>
                         <td style="max-width:260px;">{{ Str::limit($report->description, 70) }}</td>
                         <td>{{ $report->user->name }}</td>
@@ -438,7 +438,7 @@
                                 <span style="color:#94a3b8; font-size:0.875rem;">—</span>
                             @endif
                         </td>
-                        <td>
+                        <td class="barangay-action-cell" id="barangay-action-{{ $report->id }}" data-field="barangay-action">
                             @if($report->barangay_action_status === 'approved')
                                 <span class="badge badge-solved">Approved</span>
                             @elseif($report->barangay_action_status === 'disapproved')
@@ -506,26 +506,25 @@
                 </div>
                 <div id="d-image-wrap" style="display:none;">
                     <div class="detail-label">Image</div>
-                    <img id="d-image" src="" alt="Report image" class="media-img"/>
+                    <img id="d-image" src="" alt="Report image" class="media-img" onerror="this.parentElement.innerHTML='<p style=&quot;color:#94a3b8; text-align:center; padding:2rem;&quot;>Image not available</p>'"/>
                 </div>
                 <div id="d-video-wrap" style="display:none; margin-top:1rem;">
                     <div class="detail-label">Video</div>
-                    <video id="d-video" controls class="media-img" style="max-height:260px; width:100%; border-radius:8px;"></video>
+                    <video id="d-video" controls class="media-img" style="max-height:260px; width:100%; border-radius:8px;" onerror="this.parentElement.innerHTML='<p style=&quot;color:#94a3b8; text-align:center; padding:2rem;&quot;>Video not available</p>'">Your browser does not support the video tag.</video>
                 </div>
                 <!-- Barangay Action Status Update -->
                 <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid #e2e8f0;">
                     <div class="detail-label" style="margin-bottom:0.5rem;">Update Barangay Action Status</div>
-                    <form id="barangayActionForm" method="POST" action="" style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
-                        @csrf
+                    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
                         <select name="barangay_action_status" id="barangayActionSelect" class="filter-select" style="flex:1; min-width:160px;">
                             <option value="none">— No Action —</option>
                             <option value="approved">Approved</option>
                             <option value="disapproved">Disapproved</option>
                         </select>
-                        <button type="submit" style="background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; padding:0.5rem 1.25rem; border-radius:8px; font-size:0.875rem; font-weight:600; cursor:pointer;">
+                        <button type="button" id="saveBarangayActionBtn" onclick="submitBarangayActionUpdate(this)" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:0.5rem 1.25rem; border-radius:8px; font-size:0.875rem; font-weight:600; cursor:pointer;">
                             Save
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -593,14 +592,18 @@
             document.getElementById('d-status').innerHTML     = statusBadge[status] || status;
             document.getElementById('d-action').innerHTML     = actionBadge[action] || '—';
 
-            // Set barangay action form
-            document.getElementById('barangayActionForm').action = '/barangay/reports/' + reportId + '/action';
+            // Set barangay action select value
             document.getElementById('barangayActionSelect').value = barangayAction;
 
             const imgWrap = document.getElementById('d-image-wrap');
             const img     = document.getElementById('d-image');
-            if (image) {
+            if (image && image.trim()) {
+                console.log('Setting image URL:', image);
                 img.src = image;
+                img.onerror = function() {
+                    console.warn('Image failed to load:', image);
+                    imgWrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:2rem;">Image not available</p>';
+                };
                 imgWrap.style.display = 'block';
             } else {
                 imgWrap.style.display = 'none';
@@ -608,8 +611,13 @@
 
             const videoWrap = document.getElementById('d-video-wrap');
             const videoEl   = document.getElementById('d-video');
-            if (video) {
+            if (video && video.trim()) {
+                console.log('Setting video URL:', video);
                 videoEl.src = video;
+                videoEl.onerror = function() {
+                    console.warn('Video failed to load:', video);
+                    videoWrap.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:2rem;">Video not available</p>';
+                };
                 videoWrap.style.display = 'block';
             } else {
                 videoEl.src = '';
@@ -622,6 +630,90 @@
             if (e.target === document.getElementById('detailModal')) {
                 document.getElementById('detailModal').classList.remove('open');
             }
+        }
+
+        // ── Submit Barangay Action Update via AJAX ───────────────────────────
+        let currentReportId = null;
+
+        function openModalWrapper(el) {
+            // Store the report ID before opening modal
+            currentReportId = el.dataset.reportId;
+            openModal(el);
+            // Reset the select to "none"
+            document.getElementById('barangayActionSelect').value = 'none';
+        }
+
+        function submitBarangayActionUpdate(button) {
+            if (!currentReportId) {
+                alert('No report selected');
+                return;
+            }
+
+            const statusValue = document.getElementById('barangayActionSelect').value;
+            if (statusValue === 'none') {
+                alert('Please select a status');
+                return;
+            }
+
+            const originalText = button.textContent;
+            button.textContent = 'Saving...';
+            button.disabled = true;
+
+            fetch(`/barangay/reports/${currentReportId}/action`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ barangay_action_status: statusValue })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Target the cell by its unique ID
+                    const cellId = `barangay-action-${currentReportId}`;
+                    const cell = document.getElementById(cellId);
+                    
+                    if (cell) {
+                        const badges = {
+                            'approved': '<span class="badge badge-solved">Approved</span>',
+                            'disapproved': '<span class="badge badge-unverified">Disapproved</span>',
+                            'none': '<span style="color:#94a3b8; font-size:0.875rem;">—</span>'
+                        };
+                        
+                        cell.innerHTML = badges[statusValue] || '—';
+                        
+                        // Highlight row
+                        const row = document.querySelector(`tr[data-report-id="${currentReportId}"]`);
+                        if (row) {
+                            row.style.backgroundColor = '#fef9c3';
+                            setTimeout(() => { row.style.backgroundColor = ''; }, 2000);
+                        }
+                    }
+                    
+                    // Close modal
+                    document.getElementById('detailModal').classList.remove('open');
+                    currentReportId = null;
+                    
+                    alert('✅ Barangay action updated!');
+                } else {
+                    alert('❌ Error: ' + (data.message || 'Failed'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('❌ Error: ' + err.message);
+            })
+            .finally(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('open');
+            currentReportId = null;
         }
 
         // ── Notification Bell ────────────────────────────────────────────────

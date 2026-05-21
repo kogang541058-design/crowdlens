@@ -611,6 +611,14 @@
                     <canvas id="disasterChart"></canvas>
                 </div>
             </div>
+
+            <!-- Barangay Reports Analytics Chart -->
+            <div class="chart-card">
+                <h2>🏘️ Barangay Reports Analytics</h2>
+                <div class="chart-wrapper">
+                    <canvas id="barangayChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1006,6 +1014,54 @@
                                 ticks: { color: '#64748b' }
                             },
                             y: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Barangay Reports Analytics - Bar Chart
+            const barangayCtx = document.getElementById('barangayChart');
+            if (barangayCtx) {
+                new Chart(barangayCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: {!! json_encode($barangayLabels ?? []) !!},
+                        datasets: [{
+                            label: 'Number of Reports',
+                            data: {!! json_encode($barangayChartData ?? []) !!},
+                            backgroundColor: [
+                                '#3b82f6',
+                                '#ef4444',
+                                '#f59e0b',
+                                '#8b5cf6',
+                                '#10b981',
+                                '#06b6d4',
+                                '#ec4899',
+                                '#14b8a6'
+                            ],
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#64748b', font: { size: 12 } }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#e2e8f0' },
+                                ticks: { color: '#64748b' }
+                            },
+                            x: {
                                 grid: { display: false },
                                 ticks: { color: '#64748b' }
                             }
