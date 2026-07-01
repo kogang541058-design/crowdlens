@@ -1,535 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Map - Admin Dashboard</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+@extends('layouts.admin')
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f8fafc;
-            display: flex;
-            min-height: 100vh;
-        }
+@section('title', 'Map - Admin Dashboard')
 
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-            color: white;
-            padding: 2rem 0;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-        }
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+@endpush
 
-        .sidebar-header {
-            padding: 0 1.5rem 2rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
+@section('content')
+<div class="p-4 md:p-8 space-y-6">
+    
+    
+    @include('partials.notif_logout', ['page_name' => 'Reports Map'])
 
-        .sidebar-header h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .sidebar-header p {
-            color: #94a3b8;
-            font-size: 0.875rem;
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 1.5rem 0;
-        }
-
-        .nav-item {
-            margin-bottom: 0.5rem;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            color: #cbd5e1;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .nav-link.active {
-            background: rgba(59, 130, 246, 0.2);
-            color: white;
-            border-left: 3px solid #3b82f6;
-        }
-
-        .nav-link svg {
-            width: 20px;
-            height: 20px;
-            margin-right: 0.75rem;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            flex: 1;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .top-bar {
-            background: white;
-            padding: 1.5rem 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .top-bar h1 {
-            font-size: 1.75rem;
-            color: #1e293b;
-        }
-
-        .admin-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .admin-name {
-            color: #64748b;
-            font-size: 0.875rem;
-        }
-
-        .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: background 0.3s;
-        }
-
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-
-        .map-container {
-            background: white;
-            border-radius: 12px;
-            padding: 0;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .map-controls {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .map-control-btn {
-            background: white;
-            border: none;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .map-control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .map-control-btn.primary {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
-            border-radius: 12px;
-            min-height: 600px;
-        }
-
-        .map-legend {
-            position: absolute;
-            bottom: 2rem;
-            left: 1rem;
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-        }
-
-        .map-legend h3 {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #1e293b;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.25rem;
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-
-        .legend-marker {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .marker-pending { background: #f59e0b; }
-        .marker-in-progress { background: #3b82f6; }
-        .marker-resolved { background: #10b981; }
-
-        /* Notification Bell Styles */
-        .notification-bell {
-            position: relative;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 50%;
-            transition: background 0.3s;
-        }
-
-        .notification-bell:hover {
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        .notification-bell svg {
-            width: 24px;
-            height: 24px;
-            color: #64748b;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-        }
-
-        .notification-badge.show {
-            display: flex;
-        }
-
-        /* Notification Dropdown Panel */
-        .notification-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            width: 360px;
-            max-height: 480px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            display: none;
-            flex-direction: column;
-            z-index: 1000;
-            overflow: hidden;
-        }
-
-        .notification-dropdown.show {
-            display: flex;
-        }
-
-        .notification-dropdown-header {
-            padding: 1rem;
-            border-bottom: 1px solid #e5e7eb;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: #111827;
-        }
-
-        .notification-dropdown-body {
-            overflow-y: auto;
-            max-height: 400px;
-        }
-
-        .notification-item {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid #f3f4f6;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            gap: 0.75rem;
-            align-items: flex-start;
-        }
-
-        .notification-item:hover {
-            background-color: #f9fafb;
-        }
-
-        .notification-item.unread {
-            background-color: #eff6ff;
-        }
-
-        .notification-item.unread:hover {
-            background-color: #dbeafe;
-        }
-
-        .notification-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .notification-icon svg {
-            width: 20px;
-            height: 20px;
-            color: white;
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            color: #111827;
-            font-size: 0.875rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .notification-text {
-            color: #6b7280;
-            font-size: 0.8125rem;
-            line-height: 1.4;
-        }
-
-        .notification-time {
-            color: #9ca3af;
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-        }
-
-        .notification-empty {
-            padding: 3rem 1.5rem;
-            text-align: center;
-            color: #9ca3af;
-        }
-
-        .notification-empty svg {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 1rem;
-            opacity: 0.5;
-        }
-
-        /* Real-time notification popup */
-        .realtime-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            z-index: 10000;
-            animation: slideIn 0.3s ease-out;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 500;
-            max-width: 400px;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Admin Portal</h2>
-            <p>Davao City Reports</p>
-        </div>
-        <nav>
-            <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="{{ route('admin.dashboard') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                        </svg>
-                        Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.map') }}" class="nav-link active">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                        </svg>
-                        Map
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.reports') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Reports
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.users') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                        Users
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.barangay') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        Barangay
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.solved') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Solved
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        Settings
-                    </a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="top-bar">
-            <h1>Reports Map</h1>
-            <div class="admin-info">
-                <div class="notification-bell" style="position: relative;">
-                    <button onclick="toggleNotificationDropdown(event)" title="Notifications" style="background: none; border: none; cursor: pointer; padding: 0.5rem; display: flex; align-items: center; position: relative;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <span id="notificationBadge" class="notification-badge">0</span>
-                    </button>
-                    
-                    <!-- Notification Dropdown -->
-                    <div class="notification-dropdown" id="notificationDropdown">
-                        <div class="notification-dropdown-header">
-                            Notifications
-                        </div>
-                        <div class="notification-dropdown-body" id="notificationList">
-                            <div class="notification-empty">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                                </svg>
-                                <div>No new notifications</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <span class="admin-name">{{ Auth::guard('admin')->user()->name }}</span>
-                <form action="{{ route('admin.logout') }}" method="POST" style="display: inline;">
-                    @csrf
-                    <button type="submit" class="logout-btn">Logout</button>
-                </form>
+    <div class="relative w-full bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden h-[60vh] min-h-[500px]">
+        
+        <div class="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-64 z-[400] bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-md border border-slate-100 transition-all">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Verified Reports</h3>
+            
+            <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></span>
+                <span class="text-sm font-medium text-slate-700">Verified ({{ $verifiedReports->count() }})</span>
             </div>
         </div>
 
-        <div class="map-container">
-            <div class="map-legend">
-                <h3>Verified Reports</h3>
-                <div class="legend-item">
-                    <span class="legend-marker marker-resolved"></span>
-                    <span>Verified Reports ({{ $verifiedReports->count() }})</span>
-                </div>
-            </div>
-
-            <div id="map"></div>
-        </div>
+        <div id="map" class="absolute inset-0 z-10 w-full h-full bg-slate-100"></div>
     </div>
+</div>
+@endsection
 
+@push('scripts')
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Davao City boundaries (approximate)
@@ -553,6 +52,11 @@
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
+
+        // Force Leaflet to recalculate the map container size after a brief delay
+        setTimeout(function () {
+            map.invalidateSize();
+        }, 100);
 
         // Get disaster types and verified reports from database
         const disasterTypes = @json($disasterTypes);
@@ -686,14 +190,17 @@
             }
 
             const notification = document.createElement('div');
-            notification.className = 'realtime-notification';
+            // Tailwind classes for a floating toast notification
+            notification.className = 'fixed bottom-4 right-4 bg-white border-l-4 border-blue-500 rounded-lg shadow-xl p-4 flex items-start gap-3 z-[500] transition-opacity duration-300';
             notification.innerHTML = `
-                <svg style="width: 24px; height: 24px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
+                <div class="text-blue-500 mt-0.5">
+                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </div>
                 <div>
-                    <div style="font-weight: 600; margin-bottom: 0.25rem;">🚨 New Report Submitted!</div>
-                    <div style="font-size: 0.875rem; opacity: 0.95;">${report.disaster_type || 'Report'} - ${report.user_name}</div>
+                    <div class="font-bold text-slate-800 text-sm">🚨 New Report Submitted!</div>
+                    <div class="text-xs text-slate-500 mt-1">${report.disaster_type || 'Report'} - ${report.user_name}</div>
                 </div>
             `;
             
@@ -702,7 +209,7 @@
             markNotificationAsShown(report.id);
             
             setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-in';
+                notification.style.opacity = '0';
                 setTimeout(() => notification.remove(), 300);
             }, 5000);
         }
@@ -732,9 +239,9 @@
         function toggleNotificationDropdown(event) {
             event.stopPropagation();
             const dropdown = document.getElementById('notificationDropdown');
-            dropdown.classList.toggle('show');
+            dropdown.classList.toggle('hidden');
             
-            if (dropdown.classList.contains('show')) {
+            if (!dropdown.classList.contains('hidden')) {
                 populateNotifications();
                 // Mark all notifications as read when opening dropdown
                 markAllAsRead();
@@ -770,29 +277,29 @@
             
             if (notificationsList.length === 0) {
                 listContainer.innerHTML = `
-                    <div class="notification-empty">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="p-6 flex flex-col items-center justify-center gap-2 text-slate-400">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-8 h-8 text-slate-300">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
-                        <div>No new notifications</div>
+                        <span class="text-sm font-medium">No new notifications</span>
                     </div>
                 `;
                 return;
             }
 
             listContainer.innerHTML = notificationsList.map(notif => `
-                <div class="notification-item ${notif.read ? '' : 'unread'}" onclick="viewReport(${notif.id})">
-                    <div class="notification-icon">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button class="w-full text-left p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex items-start gap-3 ${notif.read ? 'opacity-70' : 'bg-blue-50/50'}" onclick="viewReport(${notif.id})">
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-full flex-shrink-0 mt-0.5">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
                     </div>
-                    <div class="notification-content">
-                        <div class="notification-title">New Report Submitted</div>
-                        <div class="notification-text">${notif.disaster_type} - ${notif.user_name}</div>
-                        <div class="notification-time">${notif.time_ago}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-800 ${notif.read ? 'font-medium' : 'font-bold'}">New Report Submitted</div>
+                        <div class="text-xs text-slate-500 mt-0.5 truncate">${notif.disaster_type} - ${notif.user_name}</div>
+                        <div class="text-[10px] text-slate-400 mt-1">${notif.time_ago}</div>
                     </div>
-                </div>
+                </button>
             `).join('');
         }
 
@@ -830,9 +337,9 @@
             const notificationBadge = document.getElementById('notificationBadge');
             notificationBadge.textContent = unreadCount;
             if (unreadCount > 0) {
-                notificationBadge.classList.add('show');
+                notificationBadge.classList.remove('hidden');
             } else {
-                notificationBadge.classList.remove('show');
+                notificationBadge.classList.add('hidden');
             }
         }
 
@@ -848,9 +355,9 @@
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('notificationDropdown');
-            const bell = document.querySelector('.notification-bell');
-            if (dropdown && bell && !bell.contains(event.target)) {
-                dropdown.classList.remove('show');
+            // Check if clicking outside the dropdown and the button that triggers it
+            if (dropdown && !event.target.closest('#notificationDropdown') && !event.target.closest('button[onclick^="toggleNotificationDropdown"]')) {
+                dropdown.classList.add('hidden');
             }
         });
 
@@ -903,5 +410,4 @@
         checkNewReports();
         setInterval(checkNewReports, 5000);
     </script>
-</body>
-</html>
+@endpush

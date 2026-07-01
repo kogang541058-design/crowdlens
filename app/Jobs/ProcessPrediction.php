@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use App\Events\PredictionCompleted;
 
 class ProcessPrediction implements ShouldQueue
 {
@@ -53,6 +54,14 @@ class ProcessPrediction implements ShouldQueue
                 'prediction_label' => $data['is_valid'],
                 'confidence_score' => $data['confidence'],
             ]);
+
+            \Log::info("Attempting to broadcast prediction.completed for report: " . $this->report->id);
+            PredictionCompleted::dispatch(
+                $this->report->id, 
+                $data['is_valid'], 
+                $data['confidence']
+            );
+
         } else {
             Log::error("HF API Failed for Report #{$this->report->id}: " . $response->body());
             

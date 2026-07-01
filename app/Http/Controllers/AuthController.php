@@ -153,13 +153,17 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        // Check which guard is authenticated and logout accordingly
-        if (Auth::guard('admin')->check()) {
-            Auth::guard('admin')->logout();
-        } else {
-            Auth::guard('web')->logout();
+        // Define the guards your application uses
+        $guards = ['web', 'admin', 'barangay'];
+
+        // Loop through and log out of any active guards
+        foreach ($guards as $guard) {
+            if (Auth::guard($guard)->check()) {
+                Auth::guard($guard)->logout();
+            }
         }
-        
+
+        // Clear the session and regenerate the CSRF token
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

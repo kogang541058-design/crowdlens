@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Events;
 
 use App\Models\Report;
@@ -25,27 +24,26 @@ class ReportSubmitted implements ShouldBroadcast
 
     /**
      * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
      */
     public function broadcastOn(): array
     {
+        // 1. Always broadcast to the global admin channel
         $channels = [
             new Channel('admin-notifications'),
         ];
 
-        // Also broadcast to the barangay channel if the report has a barangay
+        // 2. If the report is assigned to a specific barangay, 
+        // broadcast to their unique channel too!
         if ($this->report->barangay_id) {
-            $channels[] = new Channel('barangay.' . $this->report->barangay_id);
+            $channels[] = new Channel('barangay-notifications.' . $this->report->barangay_id);
         }
 
         return $channels;
     }
 
     /**
-     * The event's broadcast name.
-     *
-     * @return string
+     * The broadcast event name alias.
+     * Matches channel.listen('.report.submitted', ...)
      */
     public function broadcastAs(): string
     {
@@ -53,9 +51,8 @@ class ReportSubmitted implements ShouldBroadcast
     }
 
     /**
-     * Get the data to broadcast.
-     *
-     * @return array
+     * Get the data to broadcast. This explicitly shapes the payload 
+     * to match exactly what your JavaScript properties are looking for.
      */
     public function broadcastWith(): array
     {
@@ -64,18 +61,32 @@ class ReportSubmitted implements ShouldBroadcast
             'disaster_type' => $this->report->disaster_type,
             'disaster_type_name' => ucfirst($this->report->disaster_type),
             'description' => $this->report->description,
-            'location' => $this->report->location ?? $this->report->latitude . ', ' . $this->report->longitude,
+            'user_name' => $this->report->user->name ?? 'Anonymous User',
+            
+            // Location Data (Removed 'N/A' default so JS can fallback to lat/long if location is null)
+            'location' => $this->report->location,
             'latitude' => $this->report->latitude,
             'longitude' => $this->report->longitude,
-            'image' => $this->report->image ? \Storage::url($this->report->image) : null,
-            'video' => $this->report->video ? \Storage::url($this->report->video) : null,
-            'user_name' => $this->report->user->name,
-            'user_id' => $this->report->user_id,
-            'status' => $this->report->status,
-            'action_status' => $this->report->solved ? 'solved' : ($this->report->responses()->where('action_type', 'in_progress')->exists() ? 'in_progress' : null),
-            'created_at' => $this->report->created_at->toISOString(),
-            'formatted_date' => $this->report->created_at->format('M d, Y'),
-            'formatted_time' => $this->report->created_at->format('h:i A'),
+            
+            // Split Date and Time for the respective columns
+            'formatted_date' => $this->report->created_at ? $this->report->created_at->format('M d, Y') : now()->format('M d, Y'),
+            'formatted_time' => $this->report->created_at ? $this->report->created_at->format('h:i A') : now()->format('h:i A'),
+            
+            // Core Statuses
+            'status' => $this->report->status ?? 'pending',
+            'solved' => $this->report->solved ?? false,
+            
+            // Check for in-progress responses (to calculate 'actionStatus' in JS)
+            'has_in_progress_responses' => $this->report->responses()->where('action_type', 'in_progress')->exists(),
+            
+            // Barangay Data
+            'barangay_id' => $this->report->barangay_id,
+            'barangay_name' => $this->report->barangay ? $this->report->barangay->name : null,
+            'barangay_action_status' => $this->report->barangay_action_status ?? 'none',
+            
+            // Media URLs (Using the Storage facade)
+            'image_url' => $this->report->image ? \Illuminate\Support\Facades\Storage::url($this->report->image) : null,
+            'video_url' => $this->report->video ? \Illuminate\Support\Facades\Storage::url($this->report->video) : null,
         ];
     }
 }

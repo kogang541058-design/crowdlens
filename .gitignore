@@ -25,3 +25,6 @@ Thumbs.db
 /python_api/
 /python_api/__pycache__/
 .env
+storage/ffmpeg
+run app and reverb
+TODO

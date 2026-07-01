@@ -1,2041 +1,816 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>User Dashboard - Davao City Reports</title>
+@extends('layouts.user')
+
+@section('title', 'Dashboard - Davao City Reports')
+
+@push('styles')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Pusher & Laravel Echo CDN -->
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.15.3/dist/echo.iife.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f8fafc;
-            min-height: 100vh;
-        }
-
-        .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .navbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .navbar-brand h1 {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700;
-        }
-
-        .navbar-brand p {
-            font-size: 0.875rem;
-            color: #64748b;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 0.5rem 1.25rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .logout-btn:hover {
-            background: #dc2626;
-            transform: translateY(-1px);
-        }
-        
-        .settings-btn {
-            background: #64748b;
-            color: white;
-            border: none;
-            padding: 0.5rem 1.25rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .settings-btn:hover {
-            background: #475569;
-            transform: translateY(-1px);
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .welcome-text {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .welcome-icon {
-            width: 32px;
-            height: 32px;
-            background: #3b82f6;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-
-        .submit-report-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-        }
-
-        .submit-report-btn:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        .filter-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .filter-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 500;
-            color: #475569;
-        }
-
-        .filter-select {
-            padding: 0.5rem 1rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            background: white;
-            color: #334155;
-            font-size: 0.875rem;
-            cursor: pointer;
-            min-width: 200px;
-        }
-
-        .filter-select:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-
-        .map-heading {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 1rem;
-        }
-
-        .map-icon {
-            width: 24px;
-            height: 24px;
-        }
-
-        .map-container {
-            background: white;
-            border-radius: 16px;
-            padding: 0;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            position: relative;
-            height: 600px;
-            min-height: 500px;
-        }
-
-        .reports-section {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            margin-top: 2rem;
-        }
-
-        .reports-heading {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 2rem;
-        }
-
-        .reports-icon {
-            width: 24px;
-            height: 24px;
-        }
-
-        .empty-reports {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: #94a3b8;
-        }
-
-        .empty-reports svg {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 1rem;
-            opacity: 0.5;
-            stroke: currentColor;
-        }
-
-        .empty-reports p {
-            font-size: 1rem;
-            color: #64748b;
-        }
-
-        .reports-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .reports-table thead {
-            background: #f8fafc;
-        }
-
-        .reports-table th {
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            color: #475569;
-            font-size: 0.875rem;
-            border-bottom: 2px solid #e2e8f0;
-        }
-
-        .reports-table td {
-            padding: 1rem;
-            border-bottom: 1px solid #f1f5f9;
-            color: #334155;
-            font-size: 0.875rem;
-        }
-
-        .reports-table tbody tr:hover {
-            background: #f8fafc;
-        }
-
-        .disaster-type-select {
-            padding: 0.4rem 0.5rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            background: white;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
-            min-width: 120px;
-            display: block;
-        }
-
-        .image-preview, .video-preview {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-
-        .view-link {
-            color: #3b82f6;
-            text-decoration: none;
-            font-size: 0.875rem;
-            cursor: pointer;
-        }
-
-        .view-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Media Modal Styles */
-        /* Report Detail Modal */
-        .detail-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-        .detail-overlay.active { display: flex; }
-        .detail-modal {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 620px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        .detail-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .detail-modal-header h3 { font-size: 1.25rem; color: #1e293b; font-weight: 700; }
-        .detail-close {
-            background: none; border: none; font-size: 1.5rem;
-            cursor: pointer; color: #64748b; line-height: 1;
-        }
-        .detail-close:hover { color: #ef4444; }
-        .detail-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        .detail-grid.full { grid-template-columns: 1fr; }
-        .detail-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.25rem;
-        }
-        .detail-value { font-size: 0.95rem; color: #1e293b; }
-        .detail-media-wrap { margin-top: 1rem; }
-        .detail-media-wrap img,
-        .detail-media-wrap video {
-            width: 100%; border-radius: 10px;
-            max-height: 260px; object-fit: cover; margin-top: 0.5rem;
-        }
-        .detail-response-box {
-            margin-top: 1.25rem;
-            padding: 1rem;
-            background: #f0fdf4;
-            border-left: 4px solid #22c55e;
-            border-radius: 8px;
-        }
-        .detail-response-box .detail-label { color: #16a34a; }
-        .user-report-row:hover { background: #f8fafc; }
-
-        .media-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .media-modal.active {
-            display: flex;
-        }
-
-        .media-modal-content {
-            position: relative;
-            max-width: 95%;
-            max-height: 95%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .media-modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10001;
-            transition: background 0.3s;
-        }
-
-        .media-modal-close:hover {
-            background: rgba(255, 0, 0, 0.9);
-        }
-
-        .media-modal img {
-            max-width: 90vw;
-            max-height: 90vh;
-            width: auto;
-            height: auto;
-            display: block;
-            border-radius: 8px;
-        }
-
-        .media-modal video {
-            max-width: 90vw;
-            max-height: 90vh;
-            width: auto;
-            height: auto;
-            display: block;
-            border-radius: 8px;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 10000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-header h2 {
-            font-size: 1.5rem;
-            color: #1e293b;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #64748b;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-
-        .close-modal:hover {
-            background: #f1f5f9;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #334155;
-        }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            transition: border-color 0.2s;
-        }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .form-file {
-            padding: 0.5rem;
-        }
-
-        .location-input-wrapper {
-            position: relative;
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .location-input-wrapper .form-input {
-            flex: 1;
-        }
-
-        .gps-button {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            white-space: nowrap;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-        }
-
-        .gps-button:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-            transform: translateY(-1px);
-        }
-
-        .gps-button:disabled {
-            background: #94a3b8;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
-
-        .gps-button svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .btn-submit {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            width: 100%;
-            transition: background 0.2s;
-        }
-
-        .btn-submit:hover {
-            background: #2563eb;
-        }
-
-        .success-message {
-            background: #d1fae5;
-            color: #065f46;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-
-        .warning-message {
-            background: #fef3c7;
-            color: #92400e;
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            display: none;
-            border-left: 4px solid #f59e0b;
-        }
-
-        .warning-message.show {
-            display: block;
-        }
-
-        .file-size-info {
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            display: none;
-            border-left: 4px solid #3b82f6;
-        }
-
-        .file-size-info.show {
-            display: block;
-        }
-
-        .location-suggestions {
-            position: absolute;
-            background: white;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            margin-top: 0.25rem;
-            max-height: 200px;
-            overflow-y: auto;
-            width: 100%;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            display: none;
-        }
-
-        .location-suggestion-item {
-            padding: 0.75rem;
-            cursor: pointer;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .location-suggestion-item:hover {
-            background: #f8fafc;
-        }
-
-        .location-suggestion-item:last-child {
-            border-bottom: none;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
-            border-radius: 16px;
-        }
-
-        .map-controls {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .map-control-btn {
-            background: white;
-            border: none;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .map-control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .map-control-btn.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .map-legend {
-            position: absolute;
-            bottom: 2rem;
-            left: 1rem;
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-        }
-
-        .map-legend h3 {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #1e293b;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.25rem;
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-
-        .legend-marker {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .marker-pending { background: #f59e0b; }
-        .marker-in-progress { background: #3b82f6; }
-        .marker-resolved { background: #10b981; }
-        .marker-mine { background: #8b5cf6; }
-
-        .welcome-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .welcome-card h2 {
-            font-size: 2rem;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .welcome-card p {
-            color: #64748b;
-            font-size: 1.125rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
-        }
-
-        .stat-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .stat-icon svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        .stat-icon.blue {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        }
-
-        .stat-icon.green {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-
-        .stat-icon.yellow {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        }
-
-        .stat-icon.purple {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            color: #64748b;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .actions-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-        }
-
-        .actions-card h3 {
-            font-size: 1.5rem;
-            color: #1e293b;
-            margin-bottom: 1.5rem;
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .action-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .action-btn svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .action-btn.secondary {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        }
-
-        .action-btn.secondary:hover {
-            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
-        }
-
-        .reports-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .reports-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .reports-header h3 {
-            font-size: 1.5rem;
-            color: #1e293b;
-        }
-
-        .filter-btn {
-            background: #f1f5f9;
-            color: #475569;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .filter-btn:hover {
-            background: #e2e8f0;
-        }
-
-        .reports-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .reports-table thead {
-            background: #f8fafc;
-        }
-
-        .reports-table th {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            font-weight: 600;
-            color: #475569;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            vertical-align: top;
-            white-space: nowrap;
-            line-height: 1.2;
-        }
-
-        .reports-table td {
-            padding: 1rem;
-            border-bottom: 1px solid #f1f5f9;
-            color: #334155;
-        }
-
-        .reports-table tbody tr:hover {
-            background: #f8fafc;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-in-progress {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-resolved {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: #94a3b8;
-        }
-
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .empty-state p {
-            font-size: 1.125rem;
-        }
-
-        /* Notification Bell Styles */
-        .notification-bell {
-            position: relative;
-            background: white;
-            border: none;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .notification-bell:hover {
-            background: #f8fafc;
-            transform: scale(1.05);
-        }
-
-        .notification-bell svg {
-            width: 22px;
-            height: 22px;
-            color: #64748b;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            background: #ef4444;
-            color: white;
-            font-size: 0.625rem;
-            font-weight: 700;
-            padding: 0.125rem 0.375rem;
-            border-radius: 10px;
-            min-width: 18px;
-            text-align: center;
-            display: none;
-            animation: bounceIn 0.3s ease-out;
-        }
-
-        .notification-badge.show {
-            display: block;
-        }
-
-        @keyframes bounceIn {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        /* Real-time Notification Popup */
-        .realtime-notification {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            padding: 1rem 1.5rem;
-            min-width: 350px;
-            max-width: 400px;
-            z-index: 10000;
-            animation: slideInRight 0.4s ease-out;
-            border-left: 4px solid #3b82f6;
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .realtime-notification h4 {
-            margin: 0 0 0.5rem 0;
-            color: #1e293b;
-            font-size: 1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .realtime-notification p {
-            margin: 0;
-            color: #64748b;
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        .realtime-notification .close-notification {
-            position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 1.25rem;
-            line-height: 1;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .realtime-notification .close-notification:hover {
-            color: #64748b;
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <div>
-                <h1>CROWDLENS</h1>
-                <p>Citizen Portal</p>
-            </div>
+<style>
+    @keyframes slideDown {
+        from { 
+            opacity: 0; 
+            transform: translateY(-20px); 
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
+    }
+    .animate-slideDown { 
+        animation: slideDown 0.3s ease-out forwards; 
+    }
+</style>
+@endpush
+
+
+@section('content')
+
+    @if(session('success'))
+    <div id="successAlertOverlay" onclick="closeSuccessAlert()" class="fixed inset-0 bg-slate-900/40 z-[9999] backdrop-blur-sm"></div>
+    <div id="successAlert" class="fixed top-6 left-1/2 -translate-x-1/2 z-[10000] w-[90%] max-w-md bg-white rounded-xl shadow-2xl border border-slate-100 p-6 animate-slideDown">
+        <div class="mb-2">
+            <h3 class="text-lg font-bold text-slate-900">Success!</h3>
         </div>
-        <div class="user-info">
-            <button class="notification-bell" onclick="toggleNotifications()" title="Notifications">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                <span class="notification-badge" id="userNotificationBadge">0</span>
+        <div class="mb-6 text-sm text-slate-600 leading-relaxed">
+            {{ session('success') }}
+        </div>
+        <div class="flex justify-end">
+            <button onclick="closeSuccessAlert()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                OK
             </button>
-            <span class="user-name">{{ Auth::user()->name }}</span>
-            <a href="{{ route('settings') }}" class="settings-btn">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-                Settings
-            </a>
-            <form action="{{ route('logout') }}" method="POST" style="display: inline;">
-                @csrf
-                <button type="submit" class="logout-btn">Logout</button>
-            </form>
         </div>
-    </nav>
+    </div>
+    <script>
+        function closeSuccessAlert() {
+            document.getElementById('successAlert').style.display = 'none';
+            document.getElementById('successAlertOverlay').style.display = 'none';
+        }
+    </script>
+    @endif
 
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Success Alert Popup -->
-        @if(session('success'))
-        <div id="successAlert" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; min-width: 400px; max-width: 500px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); padding: 1.5rem; animation: slideDown 0.3s ease-out;">
-            <div style="margin-bottom: 1rem;">
-                <h3 style="margin: 0; font-size: 1.125rem; color: #1e293b; font-weight: 600;">Success!</h3>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex items-center gap-3 text-xl sm:text-2xl font-bold text-slate-800">
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
             </div>
-            <div style="margin-bottom: 1.5rem; color: #64748b; font-size: 0.9375rem; line-height: 1.5;">
-                {{ session('success') }}
+            Welcome, {{ Auth::user()->name }}!
+        </div>
+        <button onclick="openReportModal()" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Submit New Report
+        </button>
+    </div>
+
+    <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                </svg>
+                Reports Map
+            </h2>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto bg-white p-2 sm:p-1.5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="hidden sm:flex items-center gap-2 pl-2 text-sm font-medium text-slate-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Filter:
+                </div>
+                <select id="disasterFilter" class="w-full sm:w-48 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none">
+                    <option value="">All Disasters</option>
+                    @foreach($disasterTypes as $type)
+                        <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
+                    @endforeach
+                </select>
             </div>
-            <div style="text-align: right;">
-                <button onclick="closeSuccessAlert()" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 2rem; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem; min-width: 80px;">
-                    OK
+        </div>
+
+        <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+            <div id="map" class="w-full h-[400px] sm:h-[500px] rounded-xl z-10"></div>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Recent Reports
+        </h2>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-slate-600">
+                    <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 font-semibold">
+                                <div class="flex flex-col gap-2">
+                                    <span>Type of Disaster</span>
+                                    <select id="userReportsFilter" onchange="filterUserReports()" class="bg-white border border-slate-300 text-slate-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 w-full">
+                                        <option value="">All</option>
+                                        @foreach($disasterTypes as $type)
+                                            <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-4 font-semibold">Description</th>
+                            <th scope="col" class="px-6 py-4 font-semibold">Date</th>
+                            <th scope="col" class="px-6 py-4 font-semibold">Time</th>
+                            <th scope="col" class="px-6 py-4 font-semibold">User</th>
+                            <th scope="col" class="px-6 py-4 font-semibold">Location</th>
+                            <th scope="col" class="px-6 py-4 font-semibold">
+                                <div class="flex flex-col gap-2">
+                                    <span>Status</span>
+                                    <select id="userStatusFilter" onchange="filterUserReports()" class="bg-white border border-slate-300 text-slate-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 w-full">
+                                        <option value="">All</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="verified">Verified</option>
+                                        <option value="unverified">Unverified</option>
+                                    </select>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-4 font-semibold">
+                                <div class="flex flex-col gap-2">
+                                    <span>Action Status</span>
+                                    <select id="userActionStatusFilter" onchange="filterUserReports()" class="bg-white border border-slate-300 text-slate-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 w-full">
+                                        <option value="">All</option>
+                                        <option value="solved">Solved</option>
+                                        <option value="in_progress">In Progress</option>
+                                    </select>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-4 font-semibold">Image</th>
+                            <th scope="col" class="px-6 py-4 font-semibold">Video</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($reports as $report)
+                        @php
+                            $actionStatus = $report->solved ? 'solved' : ($report->responses()->where('action_type','in_progress')->exists() ? 'in_progress' : 'none');
+                            $reportLocation = $report->location ?: ($report->latitude . ', ' . $report->longitude);
+                            $latestResponse = $report->responses->sortByDesc('created_at')->first();
+                        @endphp
+                        <tr class="user-report-row hover:bg-slate-50/80 transition-colors cursor-pointer"
+                            data-disaster-type="{{ $report->disaster_type }}"
+                            data-status="{{ $report->status }}"
+                            data-action-status="{{ $actionStatus }}"
+                            data-id="{{ $report->id }}"
+                            data-description="{{ e($report->description) }}"
+                            data-user="{{ e($report->user->name) }}"
+                            data-location="{{ e($reportLocation) }}"
+                            data-date="{{ $report->created_at->format('M d, Y') }}"
+                            data-time="{{ $report->created_at->format('h:i A') }}"
+                            data-image="{{ $report->image ? Storage::url($report->image) : '' }}"
+                            data-video="{{ $report->video ? Storage::url($report->video) : '' }}"
+                            data-response="{{ e($latestResponse->response_message ?? '') }}"
+                            data-response-date="{{ $latestResponse ? $latestResponse->created_at->format('M d, Y h:i A') : '' }}"
+                            onclick="openReportDetail(this)">
+                            
+                            <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-900">{{ $report->disaster_type }}</td>
+                            <td class="px-6 py-4 max-w-[200px] truncate" title="{{ $report->description }}">{{ Str::limit($report->description, 50) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $report->created_at->format('M d, Y') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $report->created_at->format('h:i A') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ $report->user->name }}</td>
+                            <td class="px-6 py-4 max-w-[150px] truncate">{{ $report->location ?? $report->latitude . ', ' . $report->longitude }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($report->status === 'pending')
+                                    <span class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full text-xs font-semibold">Pending</span>
+                                @elseif($report->status === 'verified')
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold">Verified</span>
+                                @else
+                                    <span class="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full text-xs font-semibold">❌ Unverified</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($report->solved)
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold">Solved</span>
+                                @elseif($report->responses()->where('action_type', 'in_progress')->exists())
+                                    <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-full text-xs font-semibold">In Progress</span>
+                                @else
+                                    <span class="text-slate-400 font-medium">-</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($report->image)
+                                    <a href="javascript:void(0)" onclick="event.stopPropagation(); showMedia('{{ asset('storage/' . $report->image) }}', 'image')" class="text-blue-600 hover:text-blue-800 font-medium hover:underline">View</a>
+                                @else
+                                    <span class="text-slate-400">-</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($report->video)
+                                    <a href="javascript:void(0)" onclick="event.stopPropagation(); showMedia('{{ asset('storage/' . $report->video) }}', 'video')" class="text-blue-600 hover:text-blue-800 font-medium hover:underline">View</a>
+                                @else
+                                    <span class="text-slate-400">-</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="10" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center text-slate-400">
+                                    <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                                    </svg>
+                                    <p class="text-sm font-medium">You haven't submitted any reports yet.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+@endsection
+
+@push('scripts')
+    <div id="reportModal" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm hidden flex flex-col items-center justify-center p-4 sm:p-6">
+        <div class="animate-slideDown bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                <h2 class="text-xl font-bold text-slate-800">Submit New Report</h2>
+                <button class="text-slate-400 hover:text-slate-600 hover:bg-slate-200 p-2 rounded-full transition-colors" onclick="closeReportModal()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
-        </div>
-        <div id="successAlertOverlay" onclick="closeSuccessAlert()" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 9999;"></div>
-        <style>
-            @keyframes slideDown {
-                from {
-                    opacity: 0;
-                    transform: translateX(-50%) translateY(-20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(-50%) translateY(0);
-                }
-            }
-        </style>
-        <script>
-            function closeSuccessAlert() {
-                document.getElementById('successAlert').style.display = 'none';
-                document.getElementById('successAlertOverlay').style.display = 'none';
-            }
-        </script>
-        @endif
 
-        <!-- Header Section -->
-        <div class="header-section">
-            <div class="welcome-text">
-                <div class="welcome-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
+            <div class="p-6 overflow-y-auto custom-scrollbar">
+                @if(session('success'))
+                <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-medium">
+                    {{ session('success') }}
                 </div>
-                Welcome, {{ Auth::user()->name }}!
-            </div>
-            <button class="submit-report-btn" onclick="openReportModal()">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Submit New Report
-            </button>
-        </div>
+                @endif
 
-        <!-- Filter Section -->
-        <div class="filter-section">
-            <div class="filter-label">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                </svg>
-                Filter by Disaster Type:
-            </div>
-            <select class="filter-select" id="disasterFilter">
-                <option value="">All Disasters</option>
-                @foreach($disasterTypes as $type)
-                    <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- Map Heading -->
-        <div class="map-heading">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="map-icon">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-            </svg>
-            Reports Map
-        </div>
-
-        <!-- Map Container -->
-        <div class="map-container">
-            <div id="map"></div>
-        </div>
-
-        <!-- Your Recent Reports Section -->
-        <div class="reports-section">
-            <div class="reports-heading">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="reports-icon">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                Recent Reports
-            </div>
-            
-            <!-- Reports Table -->
-            <table class="reports-table">
-                <thead>
-                    <tr>
-                        <th>
-                            Type of Disaster
-                            <br>
-                            <select class="disaster-type-select" id="userReportsFilter" onchange="filterUserReports()">
-                                <option value="">All</option>
-                                @foreach($disasterTypes as $type)
-                                    <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
-                                @endforeach
-                            </select>
-                        </th>
-                        <th>Description</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Location</th>
-                        <th>
-                            Status
-                            <br>
-                            <select class="disaster-type-select" id="userStatusFilter" onchange="filterUserReports()">
-                                <option value="">All</option>
-                                <option value="pending">Pending</option>
-                                <option value="verified">Verified</option>
-                                <option value="unverified">Unverified</option>
-                            </select>
-                        </th>
-                        <th>
-                            Action Status
-                            <br>
-                            <select class="disaster-type-select" id="userActionStatusFilter" onchange="filterUserReports()">
-                                <option value="">All</option>
-                                <option value="solved">Solved</option>
-                                <option value="in_progress">In Progress</option>
-                            </select>
-                        </th>
-                        <th>Image</th>
-                        <th>Video</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($reports as $report)
-                    @php
-                        $actionStatus = $report->solved ? 'solved' : ($report->responses()->where('action_type','in_progress')->exists() ? 'in_progress' : 'none');
-                        $reportLocation = $report->location ?: ($report->latitude . ', ' . $report->longitude);
-                        $latestResponse = $report->responses->sortByDesc('created_at')->first();
-                    @endphp
-                    <tr class="user-report-row"
-                        data-disaster-type="{{ $report->disaster_type }}"
-                        data-status="{{ $report->status }}"
-                        data-action-status="{{ $actionStatus }}"
-                        data-id="{{ $report->id }}"
-                        data-description="{{ e($report->description) }}"
-                        data-user="{{ e($report->user->name) }}"
-                        data-location="{{ e($reportLocation) }}"
-                        data-date="{{ $report->created_at->format('M d, Y') }}"
-                        data-time="{{ $report->created_at->format('h:i A') }}"
-                        data-image="{{ $report->image ? Storage::url($report->image) : '' }}"
-                        data-video="{{ $report->video ? Storage::url($report->video) : '' }}"
-                        data-response="{{ e($latestResponse->response_message ?? '') }}"
-                        data-response-date="{{ $latestResponse ? $latestResponse->created_at->format('M d, Y h:i A') : '' }}"
-                        style="cursor:pointer;"
-                        onclick="openReportDetail(this)">
-                        <td>{{ $report->disaster_type }}</td>
-                        <td>{{ Str::limit($report->description, 50) }}</td>
-                        <td>{{ $report->created_at->format('M d, Y') }}</td>
-                        <td>{{ $report->created_at->format('h:i A') }}</td>
-                        <td>{{ $report->user->name }}</td>
-                        <td>{{ $report->location ?? $report->latitude . ', ' . $report->longitude }}</td>
-                        <td>
-                            @if($report->status === 'pending')
-                                <span class="status-badge status-pending">Pending</span>
-                            @elseif($report->status === 'verified')
-                                <span class="status-badge" style="background: #d1fae5; color: #065f46;">Verified</span>
-                            @else
-                                <span class="status-badge" style="background: #fee2e2; color: #991b1b;">❌ Unverified</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if($report->solved)
-                                <span class="status-badge" style="background: #d1fae5; color: #065f46;">Solved</span>
-                            @elseif($report->responses()->where('action_type', 'in_progress')->exists())
-                                <span class="status-badge status-in-progress"> In Progress</span>
-                            @else
-                                <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if($report->image)
-                                <a href="javascript:void(0)" onclick="showMedia('{{ asset('storage/' . $report->image) }}', 'image')" class="view-link">View</a>
-                            @else
-                                -
-                            @endif
-                        </td>
-                        <td>
-                            @if($report->video)
-                                <a href="javascript:void(0)" onclick="showMedia('{{ asset('storage/' . $report->video) }}', 'video')" class="view-link">View</a>
-                            @else
-                                -
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <!-- Empty state row -->
-                    <tr>
-                        <td colspan="10">
-                            <div class="empty-reports">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                                </svg>
-                                <p>You haven't submitted any reports yet.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Report Modal -->
-    <div id="reportModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Submit New Report</h2>
-                <button class="close-modal" onclick="closeReportModal()">&times;</button>
-            </div>
-
-            @if(session('success'))
-            <div class="success-message">
-                {{ session('success') }}
-            </div>
-            @endif
-
-            <form action="{{ route('reports.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                
-                <div class="form-group">
-                    <label class="form-label">Type of Disaster *</label>
-                    <select name="disaster_type" class="form-select" required>
-                        <option value="">Select disaster type</option>
-                        @foreach($disasterTypes as $type)
-                            <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('disaster_type')
-                        <span style="color: #ef4444; font-size: 0.875rem;">{{ $message }}</span>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Barangay *</label>
-                    <select name="barangay_id" class="form-select" required>
-                        <option value="">-- Select your barangay --</option>
-                        @foreach($barangays as $barangay)
-                            <option value="{{ $barangay->id }}">{{ $barangay->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Description *</label>
-                    <textarea name="description" id="descriptionTextarea" class="form-textarea" placeholder="Describe the situation..." maxlength="200" required></textarea>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
-                        @error('description')
-                            <span style="color: #ef4444; font-size: 0.875rem;">{{ $message }}</span>
-                        @else
-                            <span></span>
+                <form action="{{ route('reports.store') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+                    @csrf
+                    
+                    <div class="space-y-1.5">
+                        <label class="block text-sm font-semibold text-slate-700">Type of Disaster <span class="text-rose-500">*</span></label>
+                        <select name="disaster_type" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" required>
+                            <option value="">Select disaster type</option>
+                            @foreach($disasterTypes as $type)
+                                <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('disaster_type')
+                            <p class="text-rose-500 text-sm mt-1 font-medium">{{ $message }}</p>
                         @enderror
-                        <span id="charCount" style="color: #64748b; font-size: 0.875rem;">0/200</span>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label class="form-label">Location (type address or click on map) *</label>
-                    <div class="location-input-wrapper">
-                        <input type="text" name="location" id="locationInput" class="form-input" placeholder="e.g., Davao City Hall, Roxas Avenue" autocomplete="off">
-                        <button type="button" id="gpsButton" class="gps-button" onclick="getCurrentLocation()">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            Use GPS
+                    <div class="space-y-1.5">
+                        <label class="block text-sm font-semibold text-slate-700">Barangay <span class="text-rose-500">*</span></label>
+                        <select name="barangay_id" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" required>
+                            <option value="">-- Select your barangay --</option>
+                            @foreach($barangays as $barangay)
+                                <option value="{{ $barangay->id }}">{{ $barangay->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-sm font-semibold text-slate-700">Description <span class="text-rose-500">*</span></label>
+                        <textarea name="description" id="descriptionTextarea" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none min-h-[100px]" placeholder="Describe the situation..." maxlength="200" required></textarea>
+                        <div class="flex justify-between items-center text-xs mt-1">
+                            @error('description')
+                                <span class="text-rose-500 font-medium">{{ $message }}</span>
+                            @else
+                                <span></span>
+                            @enderror
+                            <span id="charCount" class="text-slate-500 font-medium">0/200</span>
+                        </div>
+                    </div>
+
+<div class="space-y-1.5">
+    <label class="block text-sm font-semibold text-slate-700">Location (type address or click on map) <span class="text-rose-500">*</span></label>
+    <div class="flex flex-col sm:flex-row gap-2">
+        <input type="text" name="location" id="locationInput" class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" placeholder="e.g., Davao City Hall, Roxas Avenue" autocomplete="off">
+        <button type="button" id="gpsButton" class="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg shrink-0 transition-colors focus:ring-2 focus:ring-slate-800 focus:ring-offset-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Use GPS
+        </button>
+    </div>
+    <input type="hidden" name="latitude" id="latitudeInput" required>
+    <input type="hidden" name="longitude" id="longitudeInput" required>
+    <p class="text-xs text-slate-500 mt-1">Current coords: <span id="currentCoords" class="font-medium text-slate-700">Not selected</span></p>
+    @error('latitude')
+        <p class="text-rose-500 text-sm mt-1 font-medium">{{ $message }}</p>
+    @enderror
+</div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-sm font-semibold text-slate-700">Upload Image <span class="text-slate-400 font-normal">(optional)</span></label>
+                        <input type="file" name="image" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors border border-slate-200 rounded-lg" accept="image/*">
+                        <p class="text-xs text-slate-500 mt-1">Max file size: 10MB</p>
+                        @error('image')
+                            <p class="text-rose-500 text-sm mt-1 font-medium">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-sm font-semibold text-slate-700">Upload Video <span class="text-slate-400 font-normal">(optional)</span></label>
+                        <input type="file" name="video" id="videoInput" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors border border-slate-200 rounded-lg" accept="video/*">
+                        <p class="text-xs text-slate-500 mt-1">Accepted formats: MP4, AVI, MOV, WMV | Max size: 200MB</p>
+                        <div id="videoSizeInfo" class="hidden text-sm mt-2 text-slate-700">
+                            <strong>📹</strong> <span id="videoSizeText"></span>
+                        </div>
+                        @error('video')
+                            <div class="mt-2 p-3 bg-rose-50 text-rose-700 border-l-4 border-rose-500 rounded-r-lg text-sm">
+                                <strong>❌ Upload Rejected:</strong> {{ $message }}
+                            </div>
+                        @enderror
+                    </div>
+
+                    <div class="pt-4 pb-2">
+                        <button type="submit" class="w-full px-5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold rounded-xl shadow-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Submit Report
                         </button>
                     </div>
-                    <input type="hidden" name="latitude" id="latitudeInput" required>
-                    <input type="hidden" name="longitude" id="longitudeInput" required>
-                    <small style="color: #64748b; font-size: 0.75rem;">Current: <span id="currentCoords">Not selected</span></small>
-                    @error('latitude')
-                        <span style="color: #ef4444; font-size: 0.875rem;">{{ $message }}</span>
-                    @enderror
-                </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-                <div class="form-group">
-                    <label class="form-label">Upload Image (optional)</label>
-                    <input type="file" name="image" class="form-input form-file" accept="image/*">
-                    <small style="color: #64748b; font-size: 0.75rem;">Max file size: 10MB</small>
-                    @error('image')
-                        <span style="color: #ef4444; font-size: 0.875rem;">{{ $message }}</span>
-                    @enderror
-                </div>
+    <div id="reportDetailOverlay" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm hidden flex flex-col items-center justify-center p-4 sm:p-6 mb-0" onclick="closeReportDetail(event)">
+        <div class="animate-slideDown bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+                
 
-                <div class="form-group">
-                    <label class="form-label">Upload Video (optional)</label>
-                    <input type="file" name="video" id="videoInput" class="form-input form-file" accept="video/*">
-                    <small style="color: #64748b; font-size: 0.75rem;">
-                        Accepted formats: MP4, AVI, MOV, WMV | Max size: 200MB
-                    </small>
-                    <div id="videoSizeInfo" class="file-size-info">
-                        <strong>📹</strong> <span id="videoSizeText"></span>
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-slate-800">Report Details</h3>
+                <button class="text-slate-400 hover:text-slate-600 hover:bg-slate-200 p-2 rounded-full transition-colors" onclick="closeReportDetail()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-6">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Type of Disaster</div>
+                        <div class="text-sm font-medium text-slate-900" id="dd-type"></div>
                     </div>
-                    @error('video')
-                        <div class="warning-message show" style="background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444;">
-                            <strong>❌ Upload Rejected:</strong> {{ $message }}
-                        </div>
-                    @enderror
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date &amp; Time</div>
+                        <div class="text-sm font-medium text-slate-900" id="dd-date"></div>
+                    </div>
                 </div>
 
-                <button type="submit" class="btn-submit">Submit Report</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Report Detail Modal -->
-    <div class="detail-overlay" id="reportDetailOverlay" onclick="closeReportDetail(event)">
-        <div class="detail-modal" onclick="event.stopPropagation()">
-            <div class="detail-modal-header">
-                <h3>Report Details</h3>
-                <button class="detail-close" onclick="closeReportDetail()">&times;</button>
-            </div>
-
-            <div class="detail-grid">
                 <div>
-                    <div class="detail-label">Type of Disaster</div>
-                    <div class="detail-value" id="dd-type"></div>
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Description</div>
+                    <div class="text-sm font-medium text-slate-900 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100" id="dd-desc"></div>
                 </div>
-                <div>
-                    <div class="detail-label">Date &amp; Time</div>
-                    <div class="detail-value" id="dd-date"></div>
-                </div>
-            </div>
 
-            <div class="detail-grid full">
-                <div>
-                    <div class="detail-label">Description</div>
-                    <div class="detail-value" id="dd-desc" style="line-height:1.6;"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reporter</div>
+                        <div class="text-sm font-medium text-slate-900" id="dd-user"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Location</div>
+                        <div class="text-sm font-medium text-slate-900" id="dd-location"></div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="detail-grid">
-                <div>
-                    <div class="detail-label">Reporter</div>
-                    <div class="detail-value" id="dd-user"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Status</div>
+                        <div id="dd-status"></div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Action Status</div>
+                        <div id="dd-action"></div>
+                    </div>
                 </div>
-                <div>
-                    <div class="detail-label">Location</div>
-                    <div class="detail-value" id="dd-location"></div>
+
+                <div id="dd-image-wrap" style="display:none;" class="space-y-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Image</div>
+                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex justify-center items-center">
+                        <img id="dd-image" src="" alt="Report image" class="max-h-64 object-contain">
+                    </div>
                 </div>
-            </div>
 
-            <div class="detail-grid">
-                <div>
-                    <div class="detail-label">Status</div>
-                    <div id="dd-status"></div>
+                <div id="dd-video-wrap" style="display:none;" class="space-y-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Video</div>
+                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-black flex justify-center items-center">
+                        <video id="dd-video" controls class="max-h-64 w-full"></video>
+                    </div>
                 </div>
-                <div>
-                    <div class="detail-label">Action Status</div>
-                    <div id="dd-action"></div>
+
+                <div id="dd-response-wrap" style="display:none;" class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                    <div class="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                        Admin Response
+                    </div>
+                    <div class="text-sm font-medium text-slate-800 mt-2 leading-relaxed" id="dd-response"></div>
+                    <div class="text-xs text-slate-500 mt-2 font-medium" id="dd-response-date"></div>
                 </div>
-            </div>
-
-            <div class="detail-media-wrap" id="dd-image-wrap" style="display:none;">
-                <div class="detail-label">Image</div>
-                <img id="dd-image" src="" alt="Report image">
-            </div>
-
-            <div class="detail-media-wrap" id="dd-video-wrap" style="display:none;">
-                <div class="detail-label">Video</div>
-                <video id="dd-video" controls style="max-height:260px;"></video>
-            </div>
-
-            <div class="detail-response-box" id="dd-response-wrap" style="display:none;">
-                <div class="detail-label">Admin Response</div>
-                <div class="detail-value" id="dd-response" style="margin-top:0.35rem;line-height:1.6;"></div>
-                <div style="font-size:0.78rem;color:#64748b;margin-top:0.25rem;" id="dd-response-date"></div>
             </div>
         </div>
     </div>
 
-    <!-- Media Modal -->
-    <div id="mediaModal" class="media-modal">
-        <button class="media-modal-close" onclick="closeMediaModal()">×</button>
-        <div class="media-modal-content" id="mediaContent"></div>
+    <div id="mediaModal" class="fixed inset-0 z-[200] bg-black/95 hidden flex-col items-center justify-center p-4">
+        <button class="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/70 hover:text-white bg-black/50 hover:bg-black p-2 rounded-full transition-all z-10" onclick="closeMediaModal()">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="w-full max-w-5xl max-h-[90vh] flex items-center justify-center relative" id="mediaContent">
+            </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // ── Report Detail Modal ─────────────────────────────────────────────
-        const statusBadgeMap = {
-            pending:    '<span class="status-badge status-pending">Pending</span>',
-            verified:   '<span class="status-badge" style="background:#d1fae5;color:#065f46;">Verified</span>',
-            unverified: '<span class="status-badge" style="background:#fee2e2;color:#991b1b;">Unverified</span>',
-        };
-        const actionBadgeMap = {
-            solved:      '<span class="status-badge" style="background:#d1fae5;color:#065f46;">Solved</span>',
-            in_progress: '<span class="status-badge status-in-progress">In Progress</span>',
-            none:        '<span style="color:#94a3b8;font-size:0.875rem;">—</span>',
-        };
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // ── Report Detail Modal ─────────────────────────────────────────────
+    const statusBadgeMap = {
+        pending:    '<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full text-xs font-semibold">Pending</span>',
+        verified:   '<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold">Verified</span>',
+        unverified: '<span class="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full text-xs font-semibold">❌ Unverified</span>',
+    };
+    
+    const actionBadgeMap = {
+        solved:      '<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold">Solved</span>',
+        in_progress: '<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-full text-xs font-semibold">In Progress</span>',
+        none:        '<span class="text-slate-400 font-medium">—</span>',
+    };
 
-        function openReportDetail(row) {
-            const type         = row.dataset.disasterType;
-            const date         = row.dataset.date + ' ' + row.dataset.time;
-            const desc         = row.dataset.description;
-            const user         = row.dataset.user;
-            const location     = row.dataset.location;
-            const status       = row.dataset.status;
-            const action       = row.dataset.actionStatus;
-            const image        = row.dataset.image;
-            const video        = row.dataset.video;
-            const response     = row.dataset.response;
-            const responseDate = row.dataset.responseDate;
+    function openReportDetail(row) {
+        const type         = row.dataset.disasterType;
+        const date         = row.dataset.date + ' ' + row.dataset.time;
+        const desc         = row.dataset.description;
+        const user         = row.dataset.user;
+        const location     = row.dataset.location;
+        const status       = row.dataset.status;
+        const action       = row.dataset.actionStatus;
+        const image        = row.dataset.image;
+        const video        = row.dataset.video;
+        const response     = row.dataset.response;
+        const responseDate = row.dataset.responseDate;
 
-            document.getElementById('dd-type').textContent     = type.charAt(0).toUpperCase() + type.slice(1);
-            document.getElementById('dd-date').textContent     = date;
-            document.getElementById('dd-desc').textContent     = desc;
-            document.getElementById('dd-user').textContent     = user;
-            document.getElementById('dd-location').textContent = location;
-            document.getElementById('dd-status').innerHTML     = statusBadgeMap[status] || status;
-            document.getElementById('dd-action').innerHTML     = actionBadgeMap[action] || actionBadgeMap.none;
+        document.getElementById('dd-type').textContent     = type.charAt(0).toUpperCase() + type.slice(1);
+        document.getElementById('dd-date').textContent     = date;
+        document.getElementById('dd-desc').textContent     = desc;
+        document.getElementById('dd-user').textContent     = user;
+        document.getElementById('dd-location').textContent = location;
+        document.getElementById('dd-status').innerHTML     = statusBadgeMap[status] || status;
+        document.getElementById('dd-action').innerHTML     = actionBadgeMap[action] || actionBadgeMap.none;
 
-            const imgWrap = document.getElementById('dd-image-wrap');
-            const imgEl   = document.getElementById('dd-image');
-            if (image) { imgEl.src = image; imgWrap.style.display = 'block'; }
-            else { imgWrap.style.display = 'none'; }
+        const imgWrap = document.getElementById('dd-image-wrap');
+        const imgEl   = document.getElementById('dd-image');
+        if (image) { imgEl.src = image; imgWrap.style.display = 'block'; }
+        else { imgWrap.style.display = 'none'; }
 
-            const vidWrap = document.getElementById('dd-video-wrap');
-            const vidEl   = document.getElementById('dd-video');
-            if (video) { vidEl.src = video; vidWrap.style.display = 'block'; }
-            else { vidEl.src = ''; vidWrap.style.display = 'none'; }
+        const vidWrap = document.getElementById('dd-video-wrap');
+        const vidEl   = document.getElementById('dd-video');
+        if (video) { vidEl.src = video; vidWrap.style.display = 'block'; }
+        else { vidEl.src = ''; vidWrap.style.display = 'none'; }
 
-            const respWrap = document.getElementById('dd-response-wrap');
-            if (response) {
-                document.getElementById('dd-response').textContent      = response;
-                document.getElementById('dd-response-date').textContent = responseDate ? 'Responded on ' + responseDate : '';
-                respWrap.style.display = 'block';
+        const respWrap = document.getElementById('dd-response-wrap');
+        if (response) {
+            document.getElementById('dd-response').textContent      = response;
+            document.getElementById('dd-response-date').textContent = responseDate ? 'Responded on ' + responseDate : '';
+            respWrap.style.display = 'block';
+        } else {
+            respWrap.style.display = 'none';
+        }
+
+        // Tailwind specific logic: Remove 'hidden', add 'flex'
+        const overlay = document.getElementById('reportDetailOverlay');
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+    }
+
+    function closeReportDetail(e) {
+        if (e && e.currentTarget && e.currentTarget !== e.target) return;
+        const overlay = document.getElementById('reportDetailOverlay');
+        
+        // Tailwind specific logic: Add 'hidden', remove 'flex'
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+        
+        // pause video if playing
+        const vid = document.getElementById('dd-video');
+        if (vid) { vid.pause(); vid.currentTime = 0; }
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeReportDetail();
+    });
+
+    // Media Modal Functions
+    function showMedia(url, type) {
+        console.log('Opening media:', type, url);
+        const mediaModal = document.getElementById('mediaModal');
+        const content = document.getElementById('mediaContent');
+        content.innerHTML = '';
+        
+        if (type === 'image') {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Report Image';
+            // Kept some inline styles for the media element itself to ensure constraints
+            img.style.cssText = 'max-width: 90vw; max-height: 90vh; width: auto; height: auto; border-radius: 8px;';
+            img.onerror = function() {
+                console.error('Failed to load image:', url);
+                content.innerHTML = `<div style="color: white; text-align: center; padding: 2rem;">Failed to load image.<br><a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Open in new tab</a></div>`;
+            };
+            content.appendChild(img);
+        } else if (type === 'video') {
+            content.innerHTML = '';
+            
+            // Create video player directly
+            const video = document.createElement('video');
+            video.controls = true;
+            video.preload = 'auto';
+            video.playsInline = true;
+            video.src = url;
+            video.style.cssText = 'max-width: 90vw; max-height: 90vh; width: 100%; height: auto; border-radius: 8px; background: #000;';
+            
+            video.addEventListener('loadedmetadata', function() {
+                console.log('✓ Video loaded:', url, video.videoWidth + 'x' + video.videoHeight, video.duration + 's');
+            });
+            
+            content.appendChild(video);
+        }
+        
+        // Tailwind specific logic: Remove 'hidden', add 'flex'
+        mediaModal.classList.remove('hidden');
+        mediaModal.classList.add('flex');
+    }
+
+    function closeMediaModal() {
+        const modal = document.getElementById('mediaModal');
+        const content = document.getElementById('mediaContent');
+        
+        // Tailwind specific logic: Add 'hidden', remove 'flex'
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Stop video playback if exists
+        const video = content.querySelector('video');
+        if (video) {
+            video.pause();
+            video.currentTime = 0;
+        }
+        
+        content.innerHTML = '';
+    }
+
+    // Modal functions
+    function openReportModal() {
+        const modal = document.getElementById('reportModal');
+        if (modal) {
+            // Tailwind specific logic: Remove 'hidden', add 'flex'
+            modal.classList.remove('hidden');
+            console.log('Modal opened');
+        } else {
+            console.error('Modal not found');
+        }
+    }
+
+    function closeReportModal() {
+        const modal = document.getElementById('reportModal');
+        if (modal) {
+            // Tailwind specific logic: Add 'hidden', remove 'flex'
+            modal.classList.add('hidden');
+        }
+    }
+
+    // Video file validation (size and format)
+    const videoInput = document.getElementById('videoInput');
+    const videoSizeInfo = document.getElementById('videoSizeInfo');
+    const videoSizeText = document.getElementById('videoSizeText');
+    const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB in bytes
+    
+    // Accepted video formats
+    const ACCEPTED_VIDEO_FORMATS = [
+        'video/mp4',
+        'video/avi',
+        'video/x-msvideo',
+        'video/quicktime',
+        'video/x-ms-wmv'
+    ];
+
+    if (videoInput) {
+        videoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            
+            if (file) {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                const fileType = file.type;
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                // Reset base classes for the notification box and make it visible
+                videoSizeInfo.className = 'mt-2 p-3 text-sm border-l-4 rounded-r-lg';
+                
+                // Check file format first
+                const isFormatAccepted = ACCEPTED_VIDEO_FORMATS.includes(fileType) || 
+                                        ['mp4', 'avi', 'mov', 'wmv'].includes(fileExtension);
+                
+                if (!isFormatAccepted) {
+                    // Tailwind classes for unsupported format (Red)
+                    videoSizeInfo.classList.add('bg-rose-50', 'text-rose-700', 'border-rose-500');
+                    videoSizeText.innerHTML = `❌ <strong>Format Not Accepted:</strong> ${fileExtension.toUpperCase()} files are not supported.<br><small>Please use: MP4, AVI, MOV, or WMV format (H.264 codec recommended)</small>`;
+                    
+                    // Clear the input
+                    videoInput.value = '';
+                    
+                    return;
+                }
+                
+                // Check file size
+                if (file.size > MAX_VIDEO_SIZE) {
+                    // Tailwind classes for oversized file (Amber)
+                    videoSizeInfo.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-500');
+                    videoSizeText.innerHTML = `⚠️ <strong>File Too Large:</strong> ${fileSizeMB}MB exceeds the 200MB limit.<br><small>This file will be rejected upon submission.</small>`;
+                } else if (fileSizeMB > 50) {
+                    // Tailwind classes for large files (Blue)
+                    videoSizeInfo.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-500');
+                    videoSizeText.innerHTML = `ℹ️ Video: ${fileSizeMB}MB (${fileExtension.toUpperCase()}). Upload may take some time.`;
+                } else {
+                    // Tailwind classes for normal files (Emerald)
+                    videoSizeInfo.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-500');
+                    videoSizeText.innerHTML = `✓ Video ready: ${fileSizeMB}MB (${fileExtension.toUpperCase()}).<br><small>Note: Videos with H.265/HEVC codec will be rejected. Use H.264 codec for best compatibility.</small>`;
+                }
             } else {
-                respWrap.style.display = 'none';
+                // Hide if no file is selected
+                videoSizeInfo.className = 'hidden';
             }
+        });
+    }
 
-            document.getElementById('reportDetailOverlay').classList.add('active');
+    // Filter user reports table - Global function for onchange events
+    window.filterUserReports = function() {
+        const disasterFilter = document.getElementById('userReportsFilter');
+        const statusFilter = document.getElementById('userStatusFilter');
+        const actionStatusFilter = document.getElementById('userActionStatusFilter');
+        
+        if (!disasterFilter || !statusFilter || !actionStatusFilter) {
+            console.error('Filter elements not found');
+            return;
+        }
+        
+        const disasterValue = disasterFilter.value;
+        const statusValue = statusFilter.value;
+        const actionValue = actionStatusFilter.value;
+        const rows = document.querySelectorAll('.user-report-row');
+        
+        rows.forEach(row => {
+            const disasterType = row.getAttribute('data-disaster-type');
+            const status = row.getAttribute('data-status');
+            const actionStatus = row.getAttribute('data-action-status');
+            
+            const matchesDisaster = disasterValue === '' || disasterType === disasterValue;
+            const matchesStatus = statusValue === '' || status === statusValue;
+            const matchesAction = actionValue === '' || actionStatus === actionValue;
+            
+            // Toggle Tailwind's 'hidden' class instead of inline styles
+            if (matchesDisaster && matchesStatus && matchesAction) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+    }
+
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+        
+
+        const reportModal = document.getElementById('reportModal');
+        const mediaModal = document.getElementById('mediaModal');
+
+        // Close report modal when clicking outside (on the backdrop)
+        if (reportModal) {
+            reportModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeReportModal();
+                }
+            });
         }
 
-        function closeReportDetail(e) {
-            // Called either by the close button (no event) or by clicking the overlay backdrop
-            if (e && e.currentTarget && e.currentTarget !== e.target) return;
-            const overlay = document.getElementById('reportDetailOverlay');
-            overlay.classList.remove('active');
-            // pause video if playing
-            const vid = document.getElementById('dd-video');
-            if (vid) { vid.pause(); vid.currentTime = 0; }
+        // Close modal when clicking outside
+        if (reportModal) {
+            reportModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeReportModal();
+                }
+            });
         }
 
-        // Close on Escape key
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closeReportDetail();
+        // Davao City boundaries (approximate)
+        const davaoCityBounds = L.latLngBounds(
+            L.latLng(6.90, 125.25),  // Southwest corner
+            L.latLng(7.50, 125.70)   // Northeast corner
+        );
+
+        // Initialize map centered on Davao City
+        const map = L.map('map', {
+            center: [7.1907, 125.4553],
+            zoom: 13,
+            maxBounds: davaoCityBounds,
+            maxBoundsViscosity: 1.0,
+            minZoom: 11,
+            maxZoom: 18
         });
 
-        // Media Modal Functions
-        function showMedia(url, type) {
-            console.log('Opening media:', type, url);
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-            content.innerHTML = '';
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Marker for selected location in the form
+        let selectedMarker = null;
+
+        // Function to add/update marker when location is selected
+        function setMarker(lat, lng, locationName) {
+            console.log('setMarker called with:', lat, lng, locationName);
             
-            if (type === 'image') {
-                const img = document.createElement('img');
-                img.src = url;
-                img.alt = 'Report Image';
-                img.style.cssText = 'max-width: 90vw; max-height: 90vh; width: auto; height: auto; border-radius: 8px;';
-                img.onerror = function() {
-                    console.error('Failed to load image:', url);
-                    content.innerHTML = `<div style="color: white; text-align: center; padding: 2rem;">Failed to load image.<br><a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Open in new tab</a></div>`;
-                };
-                content.appendChild(img);
-            } else if (type === 'video') {
-                content.innerHTML = '';
-                
-                // Create video player directly
-                const video = document.createElement('video');
-                video.controls = true;
-                video.preload = 'auto';
-                video.playsInline = true;
-                video.src = url;
-                video.style.cssText = 'max-width: 90vw; max-height: 90vh; width: 100%; height: auto; border-radius: 8px; background: #000;';
-                
-                video.addEventListener('loadedmetadata', function() {
-                    console.log('✓ Video loaded:', url, video.videoWidth + 'x' + video.videoHeight, video.duration + 's');
-                });
-                
-                content.appendChild(video);
+            if (selectedMarker) {
+                map.removeLayer(selectedMarker);
             }
             
-            modal.classList.add('active');
-        }
-
-        function closeMediaModal() {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-            modal.classList.remove('active');
-            
-            // Stop video playback if exists
-            const video = content.querySelector('video');
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-            }
-            
-            content.innerHTML = '';
-        }
-
-        // Modal functions - must be defined before use
-        function openReportModal() {
-            const modal = document.getElementById('reportModal');
-            if (modal) {
-                modal.classList.add('active');
-                console.log('Modal opened');
-            } else {
-                console.error('Modal not found');
-            }
-        }
-
-        function closeReportModal() {
-            const modal = document.getElementById('reportModal');
-            if (modal) {
-                modal.classList.remove('active');
-            }
-        }
-
-        // Get user's current GPS location - defined globally
-        window.getCurrentLocation = function() {
-            const gpsButton = document.getElementById('gpsButton');
-            const currentCoords = document.getElementById('currentCoords');
-            
-            console.log('GPS button clicked');
-            
-            if (!navigator.geolocation) {
-                alert('Geolocation is not supported by your browser');
-                return;
-            }
-            
-            // Disable button and show loading state
-            gpsButton.disabled = true;
-            gpsButton.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px; animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" fill="none" opacity="0.25"></circle><path d="M4 12a8 8 0 018-8" stroke-width="4" stroke-linecap="round"></path></svg> Getting...`;
-            
-            console.log('Requesting geolocation...');
-            
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    console.log('GPS position received:', position);
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    
-                    console.log('Lat:', lat, 'Lng:', lng);
-                    
-                    // Update hidden inputs
-                    document.getElementById('latitudeInput').value = lat;
-                    document.getElementById('longitudeInput').value = lng;
-                    
-                    // Update coordinates display
-                    currentCoords.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                    currentCoords.style.color = '#10b981';
-                    
-                    // Reset button first
-                    gpsButton.disabled = false;
-                    gpsButton.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> Use GPS';
-                    
-                    // Reverse geocode to get address
-                    console.log('Fetching address from Nominatim...');
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`, {
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    })
-                        .then(response => {
-                            console.log('Nominatim response status:', response.status);
-                            if (!response.ok) {
-                                throw new Error('Network response was not ok');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log('Address data:', data);
-                            const locationInputField = document.getElementById('locationInput');
-                            let addressText = '';
-                            
-                            if (data.display_name) {
-                                addressText = data.display_name;
-                            } else if (data.address) {
-                                // Build address from components
-                                const parts = [];
-                                if (data.address.road) parts.push(data.address.road);
-                                if (data.address.suburb || data.address.neighbourhood) parts.push(data.address.suburb || data.address.neighbourhood);
-                                if (data.address.city || data.address.municipality) parts.push(data.address.city || data.address.municipality);
-                                if (data.address.country) parts.push(data.address.country);
-                                addressText = parts.join(', ') || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                            } else {
-                                addressText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                            }
-                            
-                            // Fill location field
-                            locationInputField.value = addressText;
-                            console.log('✅ Address set:', addressText);
-                            
-                            // Now place marker on map with the address
-                            // Access the setMarker function from the DOMContentLoaded scope
-                            const event = new CustomEvent('placeMarker', {
-                                detail: { lat: lat, lng: lng, address: addressText }
-                            });
-                            window.dispatchEvent(event);
-                        })
-                        .catch(error => {
-                            console.error('❌ Reverse geocoding error:', error);
-                            // Fallback: use coordinates as location
-                            const addressText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                            document.getElementById('locationInput').value = addressText;
-                            
-                            // Still place marker
-                            const event = new CustomEvent('placeMarker', {
-                                detail: { lat: lat, lng: lng, address: addressText }
-                            });
-                            window.dispatchEvent(event);
-                        });
-                },
-                function(error) {
-                    console.error('Geolocation error:', error);
-                    let errorMessage = 'Unable to get your location. ';
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage += 'Please enable location permissions in your browser.';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage += 'Location information is unavailable.';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage += 'Location request timed out. Please try again.';
-                            break;
-                        default:
-                            errorMessage += 'An unknown error occurred.';
-                            break;
-                    }
-                    alert(errorMessage);
-                    
-                    // Reset button
-                    gpsButton.disabled = false;
-                    gpsButton.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> Use GPS';
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 0
-                }
-            );
-        }
-
-        // Video file validation (size and format)
-        const videoInput = document.getElementById('videoInput');
-        const videoSizeInfo = document.getElementById('videoSizeInfo');
-        const videoSizeText = document.getElementById('videoSizeText');
-        const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB in bytes
-        
-        // Accepted video formats
-        const ACCEPTED_VIDEO_FORMATS = [
-            'video/mp4',
-            'video/avi',
-            'video/x-msvideo',
-            'video/quicktime',
-            'video/x-ms-wmv'
-        ];
-
-        if (videoInput) {
-            videoInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                
-                if (file) {
-                    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                    const fileType = file.type;
-                    const fileExtension = file.name.split('.').pop().toLowerCase();
-                    
-                    // Always show file size info
-                    videoSizeInfo.classList.add('show');
-                    
-                    // Check file format first
-                    const isFormatAccepted = ACCEPTED_VIDEO_FORMATS.includes(fileType) || 
-                                            ['mp4', 'avi', 'mov', 'wmv'].includes(fileExtension);
-                    
-                    if (!isFormatAccepted) {
-                        // Show error for unsupported format
-                        videoSizeInfo.style.background = '#fee2e2';
-                        videoSizeInfo.style.color = '#991b1b';
-                        videoSizeInfo.style.borderLeftColor = '#ef4444';
-                        videoSizeText.innerHTML = `❌ <strong>Format Not Accepted:</strong> ${fileExtension.toUpperCase()} files are not supported.<br><small>Please use: MP4, AVI, MOV, or WMV format (H.264 codec recommended)</small>`;
-                        
-                        // Clear the input
-                        videoInput.value = '';
-                        
-                        return;
-                    }
-                    
-                    // Check file size
-                    if (file.size > MAX_VIDEO_SIZE) {
-                        // Show error for oversized file
-                        videoSizeInfo.style.background = '#fef3c7';
-                        videoSizeInfo.style.color = '#92400e';
-                        videoSizeInfo.style.borderLeftColor = '#f59e0b';
-                        videoSizeText.innerHTML = `⚠️ <strong>File Too Large:</strong> ${fileSizeMB}MB exceeds the 200MB limit.<br><small>This file will be rejected upon submission.</small>`;
-                    } else if (fileSizeMB > 50) {
-                        // Show info for large files
-                        videoSizeInfo.style.background = '#dbeafe';
-                        videoSizeInfo.style.color = '#1e40af';
-                        videoSizeInfo.style.borderLeftColor = '#3b82f6';
-                        videoSizeText.innerHTML = `ℹ️ Video: ${fileSizeMB}MB (${fileExtension.toUpperCase()}). Upload may take some time.`;
-                    } else {
-                        // Show success for normal files
-                        videoSizeInfo.style.background = '#d1fae5';
-                        videoSizeInfo.style.color = '#065f46';
-                        videoSizeInfo.style.borderLeftColor = '#10b981';
-                        videoSizeText.innerHTML = `✓ Video ready: ${fileSizeMB}MB (${fileExtension.toUpperCase()}).<br><small>Note: Videos with H.265/HEVC codec will be rejected. Use H.264 codec for best compatibility.</small>`;
-                    }
-                } else {
-                    videoSizeInfo.classList.remove('show');
-                }
-            });
-        }
-
-        // Filter user reports table - Global function for onchange events
-        window.filterUserReports = function() {
-            const disasterFilter = document.getElementById('userReportsFilter');
-            const statusFilter = document.getElementById('userStatusFilter');
-            const actionStatusFilter = document.getElementById('userActionStatusFilter');
-            
-            if (!disasterFilter || !statusFilter || !actionStatusFilter) {
-                console.error('Filter elements not found');
-                return;
-            }
-            
-            const disasterValue = disasterFilter.value;
-            const statusValue = statusFilter.value;
-            const actionValue = actionStatusFilter.value;
-            const rows = document.querySelectorAll('.user-report-row');
-            
-            rows.forEach(row => {
-                const disasterType = row.getAttribute('data-disaster-type');
-                const status = row.getAttribute('data-status');
-                const actionStatus = row.getAttribute('data-action-status');
-                
-                const matchesDisaster = disasterValue === '' || disasterType === disasterValue;
-                const matchesStatus = statusValue === '' || status === statusValue;
-                const matchesAction = actionValue === '' || actionStatus === actionValue;
-                
-                if (matchesDisaster && matchesStatus && matchesAction) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        // Wait for DOM to be ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Close modal when clicking outside
-            const modal = document.getElementById('reportModal');
-            if (modal) {
-                modal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeReportModal();
-                    }
-                });
-            }
-
-            // Davao City boundaries (approximate)
-            const davaoCityBounds = L.latLngBounds(
-                L.latLng(6.90, 125.25),  // Southwest corner
-                L.latLng(7.50, 125.70)   // Northeast corner
-            );
-
-            // Initialize map centered on Davao City
-            const map = L.map('map', {
-                center: [7.1907, 125.4553],
-                zoom: 13,
-                maxBounds: davaoCityBounds,
-                maxBoundsViscosity: 1.0,
-                minZoom: 11,
-                maxZoom: 18
-            });
-
-            // Add OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
+            selectedMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: '<div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50%; border: 4px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div><style>@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); }}</style>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                })
             }).addTo(map);
+            
+            selectedMarker.bindPopup(`<b>📍 Selected Location</b><br>${locationName || 'Your Report Location'}`).openPopup();
+            map.setView([lat, lng], 15);
+            
+            // Update form fields
+            document.getElementById('latitudeInput').value = lat;
+            document.getElementById('longitudeInput').value = lng;
+            document.getElementById('currentCoords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            
+            console.log('Marker placed successfully!');
+        }
 
-            // Marker for selected location in the form
-            let selectedMarker = null;
+        // Listen for GPS marker placement event
+        window.addEventListener('placeMarker', function(e) {
+            const { lat, lng, address } = e.detail;
+            setMarker(lat, lng, address);
+        });
 
-            // Function to add/update marker when location is selected
-            function setMarker(lat, lng, locationName) {
-                console.log('setMarker called with:', lat, lng, locationName);
+        // Geocoding - automatically search and place marker as user types
+        let searchTimeout;
+        const locationInput = document.getElementById('locationInput');
+
+        if (locationInput) {
+            locationInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
                 
-                if (selectedMarker) {
-                    map.removeLayer(selectedMarker);
+                if (query.length < 3) {
+                    return;
                 }
                 
-                selectedMarker = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        className: 'custom-marker',
-                        html: '<div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50%; border: 4px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div><style>@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); }}</style>',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
-                    })
-                }).addTo(map);
-                
-                selectedMarker.bindPopup(`<b>📍 Selected Location</b><br>${locationName || 'Your Report Location'}`).openPopup();
-                map.setView([lat, lng], 15);
-                
-                // Update form fields
-                document.getElementById('latitudeInput').value = lat;
-                document.getElementById('longitudeInput').value = lng;
-                document.getElementById('currentCoords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                
-                console.log('Marker placed successfully!');
-            }
-
-            // Listen for GPS marker placement event
-            window.addEventListener('placeMarker', function(e) {
-                const { lat, lng, address } = e.detail;
-                setMarker(lat, lng, address);
-            });
-
-            // Geocoding - automatically search and place marker as user types
-            let searchTimeout;
-            const locationInput = document.getElementById('locationInput');
-
-            if (locationInput) {
-                locationInput.addEventListener('input', function() {
-                    clearTimeout(searchTimeout);
-                    const query = this.value.trim();
-                    
-                    if (query.length < 3) {
-                        return;
-                    }
-                    
-                    // Wait 1 second after user stops typing
-                    searchTimeout = setTimeout(async () => {
-                        try {
-                            console.log('Searching for:', query);
+                // Wait 1 second after user stops typing
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        console.log('Searching for:', query);
+                        
+                        // Search with bias towards Davao City, Philippines
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/search?` +
+                            `format=json&q=${encodeURIComponent(query + ', Philippines')}&` +
+                            `limit=1`
+                        );
+                        
+                        const results = await response.json();
+                        
+                        if (results.length > 0) {
+                            const result = results[0];
+                            const lat = parseFloat(result.lat);
+                            const lon = parseFloat(result.lon);
                             
-                            // Search with bias towards Davao City, Philippines
-                            const response = await fetch(
-                                `https://nominatim.openstreetmap.org/search?` +
-                                `format=json&q=${encodeURIComponent(query + ', Philippines')}&` +
-                                `limit=1`
-                            );
+                            console.log('Location found:', result.display_name);
                             
-                            const results = await response.json();
-                            
-                            if (results.length > 0) {
-                                const result = results[0];
-                                const lat = parseFloat(result.lat);
-                                const lon = parseFloat(result.lon);
-                                
-                                console.log('Location found:', result.display_name);
-                                
-                                // Automatically place marker on map
-                                setMarker(lat, lon, result.display_name);
-                            } else {
-                                console.log('No location found for:', query);
-                            }
-                        } catch (error) {
-                            console.error('Geocoding error:', error);
+                            // Automatically place marker on map
+                            setMarker(lat, lon, result.display_name);
+                        } else {
+                            console.log('No location found for:', query);
                         }
-                    }, 1000); // 1 second delay
-                });
-            }
+                    } catch (error) {
+                        console.error('Geocoding error:', error);
+                    }
+                }, 1000); // 1 second delay
+            });
+        }
 
-            // Custom marker icons for different statuses
+        // Custom marker icons for different statuses
         const createIcon = (color) => {
             return L.divIcon({
                 className: 'custom-marker',
@@ -2081,16 +856,18 @@
             }
         ];
         const temp = 123;
+        
         // Get disaster types and verified reports from database
         // `disasterTypes` is an array of objects like { id, name, icon, color, is_active }
         const disasterTypes = @json($disasterTypes);
 
         // Get verified reports from database
-        const verifiedReports = @json($verifiedReports);
+        const markReports = @json($reports);
         let allMarkers = []; // Store all markers for filtering
+        
         // Add markers for all verified reports, using the disaster type icon/color when available
-        if (verifiedReports && verifiedReports.length > 0) {
-            verifiedReports.forEach(report => {
+        if (markReports && markReports.length > 0) {
+            markReports.forEach(report => {
                 const lat = parseFloat(report.latitude);
                 const lng = parseFloat(report.longitude);
 
@@ -2149,6 +926,30 @@
                     </div>
                 `);
             });
+
+            
+            
+            const filterSelect = document.getElementById('disasterFilter');
+
+            if (filterSelect) {
+                filterSelect.addEventListener('change', function() {
+                    const selectedType = this.value; // The value matches report.disaster_type
+
+                    allMarkers.forEach(marker => {
+                        // If "All Disasters" is selected (empty string) or type matches
+                        if (selectedType === "" || marker.disasterType === selectedType) {
+                            if (!map.hasLayer(marker)) {
+                                marker.addTo(map);
+                            }
+                        } else {
+                            // Remove the marker if it doesn't match
+                            if (map.hasLayer(marker)) {
+                                map.removeLayer(marker);
+                            }
+                        }
+                    });
+                });
+            }
         }
 
         // Add click handler to map for creating new reports
@@ -2177,8 +978,113 @@
                 });
         });
 
+
+        // Use GPS Button
+        const gpsButton = document.getElementById('gpsButton');
+
+        // Attach the click event
+        if (gpsButton) {
+            gpsButton.addEventListener('click', getCurrentLocation);
+        }
+
+        function getCurrentLocation() {
+            const gpsButton = document.getElementById('gpsButton');
+            const locationInput = document.getElementById('locationInput');
+            const latitudeInput = document.getElementById('latitudeInput');
+            const longitudeInput = document.getElementById('longitudeInput');
+            const currentCoords = document.getElementById('currentCoords');
+
+            // 1. Check if the browser supports geolocation
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+
+            // 2. Add a loading state to the button so the user knows it's working
+            const originalButtonHtml = gpsButton.innerHTML;
+            gpsButton.disabled = true;
+            gpsButton.innerHTML = `
+                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Locating...
+            `;
+
+            // 3. Request the current position
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                // Update the hidden inputs and coordinate text
+                latitudeInput.value = lat;
+                longitudeInput.value = lon;
+                currentCoords.textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                currentCoords.classList.remove('text-slate-700');
+                currentCoords.classList.add('text-emerald-600'); // Turn green on success
+
+                try {
+                    // 4. Reverse Geocoding: Get the address from the coordinates
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+                    );
+                    const data = await response.json();
+
+                    // Extract the address, fallback to "Current Location" if not found
+                    const address = data.display_name || "Current Location";
+                    
+                    // Update the text input field
+                    locationInput.value = address;
+
+                    // 5. Place the marker on the map (using your existing function)
+                    if (typeof setMarker === 'function') {
+                        setMarker(lat, lon, address);
+                    }
+
+                } catch (error) {
+                    console.error('Reverse geocoding error:', error);
+                    locationInput.value = "Current Location (Address not found)";
+                    
+                    if (typeof setMarker === 'function') {
+                        setMarker(lat, lon, "Current Location");
+                    }
+                } finally {
+                    // Restore the button state
+                    gpsButton.disabled = false;
+                    gpsButton.innerHTML = originalButtonHtml;
+                }
+
+            }, (error) => {
+                // 6. Handle errors (e.g., user denied permission)
+                console.error('Geolocation error:', error);
+                
+                let errorMessage = "An unknown error occurred while getting location.";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = "Please allow location access in your browser to use GPS.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = "Location information is currently unavailable.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = "The request to get user location timed out.";
+                        break;
+                }
+                
+                alert(errorMessage);
+                
+                // Restore the button state
+                gpsButton.disabled = false;
+                gpsButton.innerHTML = originalButtonHtml;
+                
+            }, {
+                // High accuracy forces the device to use GPS hardware if available
+                enableHighAccuracy: true, 
+                timeout: 10000,
+                maximumAge: 0
+            });
+        }
+
         // Close media modal when clicking outside or pressing Escape
-        const mediaModal = document.getElementById('mediaModal');
         if (mediaModal) {
             mediaModal.addEventListener('click', function(e) {
                 if (e.target === this) {
@@ -2212,128 +1118,30 @@
             disasterFilterEl.addEventListener('change', filterReportsByType);
         }
 
+
+
+
+
+
         // ========================================
         // REAL-TIME NOTIFICATION SYSTEM (User Side)
         // ========================================
-        
+
+
         let userNotificationCount = 0;
-        const pusherKey = '{{ config("broadcasting.connections.pusher.key") }}';
-        const pusherCluster = '{{ config("broadcasting.connections.pusher.options.cluster") }}';
-        const userId = {{ auth()->id() }};
-        
-        // Initialize Laravel Echo
-        if (pusherKey && pusherKey !== 'your_app_key') {
-            console.log('🔌 Initializing Echo for user notifications...');
+        if (typeof window.Echo !== 'undefined') {
+            console.log('✓ Echo is initialized, subscribing...');
             
-            window.Echo = new Echo({
-                broadcaster: 'pusher',
-                key: pusherKey,
-                cluster: pusherCluster,
-                forceTLS: true,
-                encrypted: true,
-                authEndpoint: '/broadcasting/auth',
-                auth: {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                }
-            });
-
-            // Listen for admin responses on user's private channel
-            window.Echo.private(`user.${userId}`)
-                .listen('.admin.responded', (data) => {
-                    console.log('📩 Admin responded to your report:', data);
-                    
-                    // Show notification popup
-                    showUserNotification(data);
-                    
-                    // Update badge
-                    userNotificationCount++;
-                    const badge = document.getElementById('userNotificationBadge');
-                    if (badge) {
-                        badge.textContent = userNotificationCount;
-                        badge.classList.add('show');
-                    }
-                    
-                    // Play notification sound
-                    playNotificationSound();
-                    
-                    // Reload page to show updated report
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
+            // Use the existing window.Echo instance
+            window.Echo.channel('admin-notifications')
+                .listen('.report.submitted', (event) => {
+                    console.log('🔔 NEW REPORT RECEIVED:', event);
+                    // ... (your existing logic)
                 });
-
-            // Connection monitoring
-            window.Echo.connector.pusher.connection.bind('connected', function() {
-                console.log('✓ User Echo connected successfully');
-            });
-            
-            window.Echo.connector.pusher.connection.bind('error', function(err) {
-                console.error('✗ User Echo connection error:', err);
-            });
         } else {
-            console.log('🔄 Using polling fallback for user notifications');
-            
-            // Polling fallback - check for new responses every 3 seconds
-            async function checkForNewResponses() {
-                try {
-                    console.log('🔍 Checking for new admin responses...');
-                    const response = await fetch('/user/check-responses', {
-                        method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json'
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        console.error('Response check failed:', response.status);
-                        return;
-                    }
-                    
-                    const data = await response.json();
-                    console.log('Response data:', data);
-                    
-                    if (data.has_new_response) {
-                        console.log('📥 New admin response detected via polling!');
-                        
-                        // Show notification for each new response
-                        if (data.latest_response) {
-                            showUserNotification({
-                                disaster_type: data.latest_response.disaster_type || 'Report',
-                                response_message: data.latest_response.response_message,
-                                action_type: data.latest_response.action_type,
-                                responded_at: data.latest_response.responded_at
-                            });
-                            
-                            // Update badge
-                            userNotificationCount++;
-                            const badge = document.getElementById('userNotificationBadge');
-                            if (badge) {
-                                badge.textContent = userNotificationCount;
-                                badge.classList.add('show');
-                            }
-                            
-                            // Play sound
-                            playNotificationSound();
-                            
-                            // Reload after 3 seconds
-                            setTimeout(() => {
-                                console.log('🔄 Reloading page to show updated report...');
-                                location.reload();
-                            }, 3000);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error checking for responses:', error);
-                }
-            }
-            
-            // Start polling immediately and then every 3 seconds
-            checkForNewResponses();
-            setInterval(checkForNewResponses, 3000);
+            console.error('⚠️ Laravel Echo is not defined on the window object.');
         }
+
         
         // Toggle notifications function
         window.toggleNotifications = function() {
@@ -2341,7 +1149,8 @@
             userNotificationCount = 0;
             const badge = document.getElementById('userNotificationBadge');
             if (badge) {
-                badge.classList.remove('show');
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
                 badge.textContent = '0';
             }
             
@@ -2353,18 +1162,24 @@
         };
 
         /**
-         * Show real-time notification popup for admin response
+         * Show real-time notification popup for admin response (Tailwind Version)
          */
         function showUserNotification(data) {
             const notification = document.createElement('div');
-            notification.className = 'realtime-notification';
+            // Using Tailwind classes for the toast notification
+            notification.className = 'fixed top-4 right-4 z-[9999] bg-white border-l-4 border-blue-500 rounded-lg shadow-xl p-4 w-80 animate-slideInRight transition-all duration-300';
+            
             notification.innerHTML = `
-                <button class="close-notification" onclick="this.parentElement.remove()">×</button>
-                <h4>🔔 Admin Response Received</h4>
-                <p><strong>${data.disaster_type}</strong></p>
-                <p style="margin-top: 0.5rem;">${data.response_message}</p>
-                <p style="margin-top: 0.5rem; color: #94a3b8; font-size: 0.75rem;">
-                    Status: <strong>${data.action_type === 'solved' ? 'Solved' : data.action_type === 'in_progress' ? 'In Progress' : 'Updated'}</strong>
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <span>🔔</span> Admin Response
+                    </h4>
+                    <button class="text-slate-400 hover:text-slate-600 transition-colors" onclick="this.closest('div.fixed').remove()">&times;</button>
+                </div>
+                <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">${data.disaster_type}</p>
+                <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">${data.response_message}</p>
+                <p class="text-xs text-slate-500 mt-3 pt-2 border-t border-slate-100">
+                    Status: <strong class="text-slate-700">${data.action_type === 'solved' ? 'Solved' : data.action_type === 'in_progress' ? 'In Progress' : 'Updated'}</strong>
                 </p>
             `;
             
@@ -2372,7 +1187,7 @@
             
             // Auto-remove after 8 seconds
             setTimeout(() => {
-                notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+                notification.classList.add('opacity-0', 'translate-x-full');
                 setTimeout(() => notification.remove(), 300);
             }, 8000);
         }
@@ -2402,29 +1217,97 @@
             }
         }
 
-            // Character counter for description textarea
-            const descriptionTextarea = document.getElementById('descriptionTextarea');
-            const charCount = document.getElementById('charCount');
+        // Character counter for description textarea (Tailwind Version)
+        const descriptionTextarea = document.getElementById('descriptionTextarea');
+        const charCount = document.getElementById('charCount');
+        
+        if (descriptionTextarea && charCount) {
+            descriptionTextarea.addEventListener('input', function() {
+                const currentLength = this.value.length;
+                const maxLength = 200;
+                charCount.textContent = currentLength + '/' + maxLength;
+                
+                // Change color using Tailwind classes when approaching limit
+                if (currentLength >= maxLength) {
+                    charCount.className = 'text-sm font-medium text-rose-500';
+                } else if (currentLength >= 160) {
+                    charCount.className = 'text-sm font-medium text-amber-500';
+                } else {
+                    charCount.className = 'text-sm font-medium text-slate-500';
+                }
+            });
+        }
+
+
+        // Function to update the table row dynamically
+        function updateTableRow(event) {
+            // 1. Find the specific row using the report_id from the event
+            const row = document.querySelector(`tr[data-id="${event.report_id}"]`);
             
-            if (descriptionTextarea && charCount) {
-                descriptionTextarea.addEventListener('input', function() {
-                    const currentLength = this.value.length;
-                    const maxLength = 200;
-                    charCount.textContent = currentLength + '/' + maxLength;
-                    
-                    // Change color when approaching limit
-                    if (currentLength >= maxLength) {
-                        charCount.style.color = '#ef4444'; // Red
-                    } else if (currentLength >= 160) {
-                        charCount.style.color = '#f59e0b'; // Orange
-                    } else {
-                        charCount.style.color = '#64748b'; // Gray
-                    }
-                });
+            // If the row isn't on this page (e.g., pagination), do nothing
+            if (!row) return;
+            if (event.status === 'unverified') {
+                row.remove();
+                return; // Stop execution
             }
 
-        }); // Close DOMContentLoaded
-    </script>
-</body>
-</html>
-php
+            // 2. Update the data attributes so the modal shows the fresh data when clicked
+            row.setAttribute('data-status', event.status);
+            row.setAttribute('data-action-status', event.action_type || 'none');
+            row.setAttribute('data-response', event.message);
+            
+            // Format today's date to match your Blade format (e.g., "Oct 24, 2023 02:30 PM")
+            const now = new Date();
+            const dateOptions = { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit', hour12: true };
+            row.setAttribute('data-response-date', now.toLocaleString('en-US', dateOptions));
+
+            // 3. Update the Status badge (7th column, index 6)
+            const statusCell = row.children[6];
+            if (event.status === 'pending') {
+                statusCell.innerHTML = `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full text-xs font-semibold">Pending</span>`;
+            } else if (event.status === 'verified') {
+                statusCell.innerHTML = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold">Verified</span>`;
+            } else if (event.status === 'unverified') {
+                statusCell.innerHTML = `<span class="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full text-xs font-semibold">❌ Unverified</span>`;
+            }
+
+            // 4. Update the Action Status badge (8th column, index 7)
+            const actionCell = row.children[7];
+            if (event.action_type === 'solved') {
+                actionCell.innerHTML = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-semibold">Solved</span>`;
+            } else if (event.action_type === 'in_progress') {
+                actionCell.innerHTML = `<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-full text-xs font-semibold">In Progress</span>`;
+            } else {
+                actionCell.innerHTML = `<span class="text-slate-400 font-medium">-</span>`;
+            }
+
+            // 5. Add a temporary highlight effect so the user notices the change
+            const originalBg = row.className;
+            row.classList.add('bg-indigo-50');
+            setTimeout(() => {
+                row.classList.remove('bg-indigo-50');
+            }, 2000);
+        }
+
+        // --- YOUR EXISTING ECHO LISTENER ---
+        const userId = {{ auth()->id() ?? 'null' }};
+
+        if (userId !== null && window.Echo) {
+            window.Echo.private(`user.${userId}`)
+                .listen('.admin.responded', (event) => {
+                    // Your previous notification logic
+                    // updateBadge(unreadCount + 1);
+                    // renderNotification(event.message, false, 'Just now');
+                    
+                    // CALL THE NEW TABLE UPDATE FUNCTION HERE
+                    updateTableRow(event);
+                });
+        }
+
+    });
+
+
+
+
+</script>
+@endpush

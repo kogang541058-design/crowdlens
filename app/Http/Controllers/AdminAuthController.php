@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
+use App\Events\AdminResponded;
 
 class AdminAuthController extends Controller
 {
@@ -345,9 +346,21 @@ class AdminAuthController extends Controller
             \App\Models\Solved::where('report_id', $report->id)->delete();
         }
 
-        // Broadcast real-time notification to the user who submitted the report
+        \App\Models\Notification::create([
+            'admin_id' => $report->user_id,
+            'report_id' => $report->id,
+            'message' => 'An admin has responded to your report: ' . $validated['response_message'],
+            'is_read' => false, // Assuming you have a way to track unread notifications
+        ]);
+
         \Log::info('Broadcasting AdminResponded event for report ID: ' . $report->id . ' to user ID: ' . $report->user_id);
-        broadcast(new \App\Events\AdminResponded($report->load(['user', 'responses.admin']), $response->load('admin'), $report->user_id))->toOthers();
+        AdminResponded::dispatch(
+            $report->id, 
+            $report->user_id,
+            $validated['status'], 
+            $validated['action_type'],
+            $validated['response_message']
+        );
 
         // If status is unverified, delete the report and its associated files
         if ($validated['status'] === 'unverified') {

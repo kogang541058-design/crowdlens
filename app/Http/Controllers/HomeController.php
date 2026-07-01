@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use App\Models\Notification;
 
 class HomeController extends Controller
 {
@@ -18,6 +19,9 @@ class HomeController extends Controller
             if (auth()->guard('admin')->check()) {
                 auth()->guard('admin')->logout();
             }
+            if (auth()->guard('barangay')->check()) {
+                auth()->guard('barangay')->logout(); 
+            }
             if (auth()->guard('web')->check()) {
                 auth()->guard('web')->logout();
             }
@@ -29,6 +33,10 @@ class HomeController extends Controller
         // Redirect authenticated users to their respective dashboards
         if (auth()->guard('admin')->check()) {
             return redirect()->route('admin.dashboard');
+        }
+
+        if (auth()->guard('barangay')->check()) {
+            return redirect()->route('barangay.dashboard'); 
         }
         
         if (auth()->guard('web')->check()) {
@@ -175,5 +183,32 @@ class HomeController extends Controller
         ]);
         
         return back()->with('success', 'Password changed successfully!');
+    }
+
+    public function fetch()
+    {
+        // Fetch the 10 most recent notifications for the logged-in user
+        // $notifications = Notification::where('user_id', auth()->id())
+        //     ->latest()
+        //     ->take(10)
+        //     ->get();
+        
+        // $unreadCount = Notification::where('user_id', auth()->id())
+        //     ->where('is_read', false)
+        //     ->count();
+
+        // return response()->json([
+        //     'notifications' => $notifications,
+        //     'unread_count' => $unreadCount
+        // ]);
+    }
+
+    public function markAllRead()
+    {
+        // Notification::where('user_id', auth()->id())
+        //     ->where('is_read', false)
+        //     ->update(['is_read' => true]);
+
+        // return response()->json(['success' => true]);
     }
 }

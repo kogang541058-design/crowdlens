@@ -1,4 +1,4 @@
-@extends('layouts.user')
+@extends('layouts.admin')
 
 <!-- @section('title', 'Reports - $barangay->name') -->
 @section('title', 'Account Settings - Admin Dashboard')
@@ -6,11 +6,10 @@
 @section('content')
     
 <div class="p-4 md:p-6 lg:p-8 w-full max-w-7xl mx-auto">
-                
-    <a href="{{ route('dashboard') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors">
-        ← Back to Dashboard
-    </a>
+    
+    @include('partials.notif_logout', ['page_name' => 'Account Settings', 'display_name' => $barangay->name])
 
+        
     @if(session('success'))
     <div class="mb-6 flex items-center gap-3 p-4 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 shadow-sm">
         <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -27,7 +26,7 @@
         </div>
     @endif
 
-    <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 flex flex-col h-full">
             <div class="mb-6">

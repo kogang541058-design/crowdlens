@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Report;
+use App\Events\BarangayActionUpdated;
 
 class BarangayAuthController extends Controller
 {
@@ -54,17 +55,19 @@ class BarangayAuthController extends Controller
         $barangay = Auth::guard('barangay')->user();
         $since    = $request->query('since'); // ISO-8601 string
 
+        // 'solved' is correctly eager-loaded here
         $query = Report::with(['user', 'solved', 'responses'])
             ->where('barangay_id', $barangay->id);
 
         if ($since) {
             $query->where(function ($q) use ($since) {
                 $q->where('created_at', '>', $since)
-                  ->orWhere('updated_at', '>', $since);
+                ->orWhere('updated_at', '>', $since);
             });
         }
 
         $reports = $query->orderBy('created_at', 'desc')->get()->map(function ($r) use ($since) {
+            // Checks if the 'hasOne' Solved relationship exists
             $actionStatus = $r->solved
                 ? 'solved'
                 : ($r->responses->where('action_type', 'in_progress')->count() ? 'in_progress' : 'none');
@@ -78,12 +81,12 @@ class BarangayAuthController extends Controller
                 'disaster_type_name'=> ucfirst($r->disaster_type),
                 'description'       => $r->description,
                 'location'          => $location,
-                'user_name'         => $r->user->name,
+                'user_name'         => $r->user->name ?? 'Unknown',
                 'status'            => $r->status,
                 'action_status'     => $actionStatus,
                 'barangay_action'   => $r->barangay_action_status ?? 'none',
-                'image'             => $r->image ? \Storage::url($r->image) : '',
-                'video'             => $r->video ? \Storage::url($r->video) : '',
+                'image'             => $r->image ? Storage::url($r->image) : '',
+                'video'             => $r->video ? Storage::url($r->video) : '',
                 'formatted_date'    => $r->created_at->format('M d, Y'),
                 'formatted_time'    => $r->created_at->format('h:i A'),
                 'is_new'            => $since && $r->created_at->toISOString() > $since,
@@ -103,7 +106,6 @@ class BarangayAuthController extends Controller
     {
         $barangay = Auth::guard('barangay')->user();
 
-        // Ensure the report belongs to this barangay
         if ($report->barangay_id !== $barangay->id) {
             abort(403, 'Unauthorized action.');
         }
@@ -112,19 +114,56 @@ class BarangayAuthController extends Controller
             'barangay_action_status' => 'required|in:approved,disapproved,none',
         ]);
 
+        $statusToSave = $validated['barangay_action_status'] === 'none' ? null : $validated['barangay_action_status'];
+
         $report->update([
-            'barangay_action_status' => $validated['barangay_action_status'] === 'none' ? null : $validated['barangay_action_status'],
+            'barangay_action_status' => $statusToSave,
         ]);
 
-        // Return JSON for AJAX requests
+        broadcast(new BarangayActionUpdated($report->id, $statusToSave));
+
         if ($request->wantsJson() || $request->isXmlHttpRequest()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Barangay action status updated successfully.',
-                'status' => $validated['barangay_action_status'],
+                'status'  => $validated['barangay_action_status'],
             ]);
         }
 
-        return redirect()->route('barangay.reports')->with('success', 'Barangay action status updated successfully.');
+        return redirect()->back()->with('success', 'Barangay action status updated successfully.');
+        // return redirect()->route('barangay.reports')->with('success', 'Barangay action status updated successfully.');
+    }
+
+    public function getNotifications(Request $request)
+    {
+        // 1. Get the currently logged-in barangay
+        $barangay = Auth::guard('barangay')->user();
+
+        // 2. Fetch recent reports assigned to THIS specific barangay
+        // We use "with('user')" to prevent N+1 database query issues
+        $reports = Report::with('user')
+            ->where('barangay_id', $barangay->id)
+            ->orderBy('created_at', 'desc')
+            ->take(15) // Limit to the 15 most recent for the dropdown
+            ->get();
+
+        // 3. Format the data to match the JavaScript array expectations
+        $notifications = $reports->map(function ($report) {
+            return [
+                'id' => $report->id, // If you have a separate notifications table, use that ID. Otherwise, use report ID.
+                'report_id' => $report->id,
+                'disaster_type' => $report->disaster_type,
+                'user_name' => $report->user->name ?? 'Anonymous User',
+                'time_ago' => $report->created_at->diffForHumans(), // e.g., "5 minutes ago"
+                
+                // If you don't track "read/unread" status in the database yet, default to false
+                'is_read' => $report->status !== 'pending', 
+            ];
+        });
+
+        // 4. Return as JSON for the fetch() call
+        return response()->json([
+            'notifications' => $notifications
+        ]);
     }
 }

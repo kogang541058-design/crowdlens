@@ -5,6 +5,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\BarangayAuthController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Models\Report;
 use App\Jobs\ProcessPrediction;
@@ -42,7 +43,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [HomeController::class, 'settings'])->name('settings');
     Route::put('/settings/profile', [HomeController::class, 'updateProfile'])->name('settings.profile');
     Route::put('/settings/password', [HomeController::class, 'updatePassword'])->name('settings.password');
+
+    // User, Admin, and Barangay profile and password update
+    Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+
+    Route::get('/user/notifications', [HomeController::class, 'fetch'])->name('notifications.fetch');
+    Route::post('/user/notifications/mark-read', [HomeController::class, 'markAllRead'])->name('notifications.mark-read');
 });
+
+Route::middleware('auth:admin,barangay')->group(function () {
+    
+    Route::get('/staff-settings', [ProfileController::class, 'staffSettings'])->name('staff.settings');
+    
+    Route::post('/reports/{report}/run-ai', 
+        [ReportController::class, 'runPrediction'])
+        ->name('reports.run-ai');
+});
+
 
 // Admin routes
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -74,10 +92,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/solved', [AdminAuthController::class, 'solved'])->name('solved');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
-        Route::post('/reports/{report}/run-ai', function (Report $report) {
-            ProcessPrediction::dispatch($report);
-            return response()->json(['message' => 'AI validation started in the background.']);
-        })->name('reports.run-ai'); 
+        // Route::post('/reports/{report}/run-ai', function (Report $report) {
+        //     ProcessPrediction::dispatch($report);
+        // })->name('reports.run-ai'); 
+        
     });
 
 });
@@ -86,10 +104,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::prefix('barangay')->name('barangay.')->group(function () {
     // Protected barangay routes
     Route::middleware(['auth:barangay'])->group(function () {
-        Route::get('/dashboard', [BarangayAuthController::class, 'dashboard'])->name('dashboard');
-        Route::get('/reports', [BarangayAuthController::class, 'reports'])->name('reports');
-        Route::get('/reports/poll', [BarangayAuthController::class, 'pollReports'])->name('reports.poll');
-        Route::post('/reports/{report}/action', [BarangayAuthController::class, 'updateActionStatus'])->name('reports.action');
-        Route::post('/logout', [BarangayAuthController::class, 'logout'])->name('logout');
+        Route::get('/dashboard', [BarangayAuthController::class, 'dashboard'])
+            ->name('dashboard');
+        Route::get('/reports', [BarangayAuthController::class, 'reports'])
+            ->name('reports');
+        Route::get('/reports/poll', [BarangayAuthController::class, 'pollReports'])
+            ->name('reports.poll');
+        Route::get('/notifications', [BarangayAuthController::class, 'getNotifications'])
+            ->name('notifications.get');
+        Route::patch('/reports/{report}/action', [BarangayAuthController::class, 'updateActionStatus'])
+            ->name('reports.action');
+        Route::post('/logout', [BarangayAuthController::class, 'logout'])
+            ->name('logout');
     });
 });
+
+

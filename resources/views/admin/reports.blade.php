@@ -1,931 +1,113 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Reports - Admin Dashboard</title>
+@extends('layouts.admin')
+
+@section('title', 'Reports - Admin Dashboard')
+
+
+@section('content')
     
-    <!-- Pusher & Laravel Echo via CDN -->
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.15.3/dist/echo.iife.js"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f8fafc;
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-            color: white;
-            padding: 2rem 0;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            padding: 0 1.5rem 2rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-header h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .sidebar-header p {
-            color: #94a3b8;
-            font-size: 0.875rem;
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 1.5rem 0;
-        }
-
-        .nav-item {
-            margin-bottom: 0.5rem;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            color: #cbd5e1;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .nav-link.active {
-            background: rgba(59, 130, 246, 0.2);
-            color: white;
-            border-left: 3px solid #3b82f6;
-        }
-
-        .nav-link svg {
-            width: 20px;
-            height: 20px;
-            margin-right: 0.75rem;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            flex: 1;
-            padding: 2rem;
-        }
-
-        .top-bar {
-            background: white;
-            padding: 1.5rem 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .top-bar h1 {
-            font-size: 1.75rem;
-            color: #1e293b;
-        }
-
-        .admin-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .admin-name {
-            color: #64748b;
-            font-size: 0.875rem;
-        }
-
-        .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: background 0.3s;
-        }
-
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-
-        .reports-container {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .reports-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .reports-header h2 {
-            font-size: 1.5rem;
-            color: #1e293b;
-        }
-
-        .add-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: transform 0.2s;
-        }
-
-        .add-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: #94a3b8;
-        }
-
-        .empty-state svg {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 1.5rem;
-            opacity: 0.5;
-        }
-
-        .empty-state p {
-            font-size: 1.125rem;
-        }
-
-        .disaster-type-select {
-            padding: 0.4rem 0.5rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            background: white;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
-            min-width: 120px;
-            display: block;
-        }
-
-        .image-preview, .video-preview {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-
-        .view-link {
-            color: #3b82f6;
-            text-decoration: none;
-            font-size: 0.875rem;
-            cursor: pointer;
-        }
-
-        .view-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Media Modal Styles */
-        .media-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .media-modal.active {
-            display: flex;
-        }
-
-        .media-modal-content {
-            position: relative;
-            max-width: 95%;
-            max-height: 95%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .media-modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10001;
-            transition: background 0.3s;
-        }
-
-        .media-modal-close:hover {
-            background: rgba(255, 0, 0, 0.9);
-        }
-
-        .media-modal img {
-            max-width: 90vw;
-            max-height: 90vh;
-            width: auto;
-            height: auto;
-            display: block;
-            border-radius: 8px;
-        }
-
-        .media-modal video {
-            max-width: 90vw;
-            max-height: 90vh;
-            width: auto;
-            height: auto;
-            display: block;
-            border-radius: 8px;
-        }
-
-        .reports-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .reports-table thead {
-            background: #f8fafc;
-        }
-
-        .reports-table th {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            font-weight: 600;
-            color: #475569;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            vertical-align: top;
-            line-height: 1.2;
-        }
-
-        .reports-table td {
-            padding: 1rem;
-            border-bottom: 1px solid #f1f5f9;
-            color: #334155;
-            vertical-align: middle;
-        }
-
-        .reports-table tbody tr:hover {
-            background: #f8fafc;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-verified {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-btn {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .status-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-unverified {
-            background: #f59e0b;
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-unverified:hover {
-            transform: scale(1.05);
-            background: #d97706;
-        }
-
-        .badge-solved {
-            background: #d1fae5;
-            color: #065f46;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .badge-in-progress {
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .badge-pending {
-            background: #fef3c7;
-            color: #92400e;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .badge-verified {
-            background: #d1fae5;
-            color: #065f46;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .badge-unverified {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        /* Notification Bell Styles */
-        .notification-bell {
-            position: relative;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 50%;
-            transition: background 0.3s;
-        }
-
-        .notification-bell:hover {
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        .notification-bell svg {
-            width: 24px;
-            height: 24px;
-            color: #64748b;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-        }
-
-        .notification-badge.show {
-            display: flex;
-        }
-
-        /* Notification Dropdown Panel */
-        .notification-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            width: 360px;
-            max-height: 480px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            display: none;
-            flex-direction: column;
-            z-index: 1000;
-            overflow: hidden;
-        }
-
-        .notification-dropdown.show {
-            display: flex;
-        }
-
-        .notification-dropdown-header {
-            padding: 1rem;
-            border-bottom: 1px solid #e5e7eb;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: #111827;
-        }
-
-        .notification-dropdown-body {
-            overflow-y: auto;
-            max-height: 400px;
-        }
-
-        .notification-item {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid #f3f4f6;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            gap: 0.75rem;
-            align-items: flex-start;
-        }
-
-        .notification-item:hover {
-            background-color: #f9fafb;
-        }
-
-        .notification-item.unread {
-            background-color: #eff6ff;
-        }
-
-        .notification-item.unread:hover {
-            background-color: #dbeafe;
-        }
-
-        .notification-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .notification-icon svg {
-            width: 20px;
-            height: 20px;
-            color: white;
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            color: #111827;
-            font-size: 0.875rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .notification-text {
-            color: #6b7280;
-            font-size: 0.8125rem;
-            line-height: 1.4;
-        }
-
-        .notification-time {
-            color: #9ca3af;
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-        }
-
-        .notification-empty {
-            padding: 3rem 1.5rem;
-            text-align: center;
-            color: #9ca3af;
-        }
-
-        .notification-empty svg {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 1rem;
-            opacity: 0.5;
-        }
-
-        /* Report Detail Modal */
-        .report-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        }
-
-        .report-modal-overlay.show {
-            display: flex;
-        }
-
-        .report-modal {
-            background: white;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 700px;
-            max-height: 90vh;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: modalSlideIn 0.3s ease-out;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .report-modal-header {
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid #e5e7eb;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .report-modal-header h3 {
-            margin: 0;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .report-modal-close {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .report-modal-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .report-modal-body {
-            padding: 2rem;
-            overflow-y: auto;
-            max-height: calc(90vh - 140px);
-        }
-
-        .report-detail-row {
-            margin-bottom: 1.5rem;
-        }
-
-        .report-detail-label {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .report-detail-value {
-            color: #1f2937;
-            font-size: 1rem;
-            line-height: 1.6;
-        }
-
-        .report-media-preview img,
-        .report-media-preview video {
-            width: 100%;
-            max-height: 400px;
-            object-fit: contain;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .report-row {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .report-row:hover {
-            background-color: #f9fafb;
-        }
-
-        /* Real-time notification popup */
-        .realtime-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            z-index: 10000;
-            animation: slideIn 0.3s ease-out;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 500;
-            max-width: 400px;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-        }
-
-        .notification-pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Admin Portal</h2>
-            <p>Davao City Reports</p>
-        </div>
-        <nav>
-            <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="{{ route('admin.dashboard') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                        </svg>
-                        Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.map') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                        </svg>
-                        Map
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.reports') }}" class="nav-link active">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Reports
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.users') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                        Users
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.barangay') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        Barangay
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.solved') }}" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Solved
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        Settings
-                    </a>
-                </li>
-            </ul>
-        </nav>
+<div class="p-4 md:p-6 lg:p-8 w-full max-w-7xl mx-auto">
+    @include('partials.notif_logout', ['page_name' => 'Reports Management'])
+
+    @if(session('success'))
+    <div class="bg-emerald-50 text-emerald-800 p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm flex items-center gap-3">
+        <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-sm font-medium">{{ session('success') }}</span>
     </div>
+    @endif
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="top-bar">
-            <h1>Reports Management</h1>
-            <div class="admin-info">
-                <div class="notification-bell" style="position: relative;">
-                    <button onclick="toggleNotificationDropdown(event)" title="Notifications" style="background: none; border: none; cursor: pointer; padding: 0.5rem; display: flex; align-items: center; position: relative;">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <span id="notificationBadge" class="notification-badge">0</span>
-                    </button>
-                    
-                    <!-- Notification Dropdown -->
-                    <div class="notification-dropdown" id="notificationDropdown">
-                        <div class="notification-dropdown-header">
-                            Notifications
-                        </div>
-                        <div class="notification-dropdown-body" id="notificationList">
-                            <div class="notification-empty">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                                </svg>
-                                <div>No new notifications</div>
-                            </div>
-                        </div>
-                    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        
+        <div class="p-6 border-b border-slate-100 bg-slate-50/50 space-y-4">
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="text-lg font-bold text-slate-800">Recent Reports Grid</h2>
+                <button onclick="exportTableToExcel('Reports_Export')" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export to Excel
+                </button>
+
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Disaster Type</label>
+                    <select class="w-full bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" id="adminDisasterFilter" onchange="filterAdminReports()">
+                        <option value="">All Types</option>
+                        @foreach($disasterTypes as $type)
+                            <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <span class="admin-name">{{ Auth::guard('admin')->user()->name }}</span>
-                <form action="{{ route('admin.logout') }}" method="POST" style="display: inline;">
-                    @csrf
-                    <button type="submit" class="logout-btn">Logout</button>
-                </form>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Verification Status</label>
+                    <select class="w-full bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" id="statusFilter" onchange="filterAdminReports()">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="verified">Verified</option>
+                        <option value="unverified">Unverified</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Action Progress</label>
+                    <select class="w-full bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" id="actionStatusFilter" onchange="filterAdminReports()">
+                        <option value="">All Progress</option>
+                        <option value="solved">Solved</option>
+                        <option value="in_progress">In Progress</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Barangay Zone</label>
+                    <select class="w-full bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" id="barangayFilter" onchange="filterAdminReports()">
+                        <option value="">All Barangays</option>
+                        @foreach(\App\Models\Barangay::orderBy('name')->get() as $b)
+                            <option value="{{ $b->id }}">{{ $b->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Barangay Validation</label>
+                    <select class="w-full bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200" id="barangayActionFilter" onchange="filterAdminReports()">
+                        <option value="">All Actions</option>
+                        <option value="approved">Approved</option>
+                        <option value="disapproved">Disapproved</option>
+                        <option value="none">No Action</option>
+                    </select>
+                </div>
             </div>
         </div>
 
-        <div class="reports-container">
-            @if(session('success'))
-            <div style="background: #d1fae5; color: #065f46; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #10b981;">
-                {{ session('success') }}
-            </div>
-            @endif
-
-            <div class="reports-header">
-                <h2 style="font-size: 1.5rem; font-weight: 600; color: #1e293b; margin: 0;">Recent Reports</h2>
-            </div>
-
-            <table class="reports-table">
+        <div class="w-full overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm text-slate-600">
                 <thead>
-                    <tr>
-                        <th style="width: 150px; vertical-align: top;">
-                            Type of Disaster
-                            <br>
-                            <select class="disaster-type-select" id="adminDisasterFilter" onchange="filterAdminReports()">
-                                <option value="">All</option>
-                                @foreach($disasterTypes as $type)
-                                    <option value="{{ $type->name }}">{{ $type->icon }} {{ $type->name }}</option>
-                                @endforeach
-                            </select>
-                        </th>
-                        <th style="width: 250px; vertical-align: top;">Description</th>
-                        <th style="width: 110px; vertical-align: top;">Date</th>
-                        <th style="width: 90px; vertical-align: top;">Time</th>
-                        <th style="width: 150px; vertical-align: top;">User</th>
-                        <th style="width: 200px; vertical-align: top;">Location</th>
-                        <th style="width: 150px; vertical-align: top;">Prediction</th>
-                        <th style="width: 200px; vertical-align: top;">Confidence</th>
-                        <th style="width: 140px; vertical-align: top;">
-                            Status
-                            <br>
-                            <select class="disaster-type-select" id="statusFilter" onchange="filterAdminReports()">
-                                <option value="">All</option>
-                                <option value="pending">Pending</option>
-                                <option value="verified">Verified</option>
-                                <option value="unverified">Unverified</option>
-                            </select>
-                        </th>
-                        <th style="width: 140px; vertical-align: top;">
-                            Action Status
-                            <br>
-                            <select class="disaster-type-select" id="actionStatusFilter" onchange="filterAdminReports()">
-                                <option value="">All</option>
-                                <option value="solved">Solved</option>
-                                <option value="in_progress">In Progress</option>
-                            </select>
-                        </th>
-                        <th style="width: 150px; vertical-align: top;">
-                            Barangay
-                            <br>
-                            <select class="disaster-type-select" id="barangayFilter" onchange="filterAdminReports()">
-                                <option value="">All</option>
-                                @foreach(\App\Models\Barangay::orderBy('name')->get() as $b)
-                                    <option value="{{ $b->id }}">{{ $b->name }}</option>
-                                @endforeach
-                            </select>
-                        </th>
-                        <th style="width: 150px; vertical-align: top;">
-                            Barangay Action
-                            <br>
-                            <select class="disaster-type-select" id="barangayActionFilter" onchange="filterAdminReports()">
-                                <option value="">All</option>
-                                <option value="approved">Approved</option>
-                                <option value="disapproved">Disapproved</option>
-                                <option value="none">No Action</option>
-                            </select>
-                        </th>
-                        <th style="display: none;">Image</th>
-                        <th style="display: none;">Video</th>
-                        <th style="display: none;">Action</th>
+                    <tr class="bg-slate-50/70 border-b border-slate-100 text-xs font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        <th class="px-6 py-4">Type of Disaster</th>
+                        <th class="px-6 py-4 min-w-[240px]">Description</th>
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Time</th>
+                        <th class="px-6 py-4">User</th>
+                        <th class="px-6 py-4 min-w-[180px]">Location</th>
+                        <th class="px-6 py-4">Prediction</th>
+                        <th class="px-6 py-4">Confidence</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Action Status</th>
+                        <th class="px-6 py-4">Barangay</th>
+                        <th class="px-6 py-4">Barangay Action</th>
+                        <th class="hidden">Image</th>
+                        <th class="hidden">Video</th>
+                        <th class="hidden">Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="reportsTableBody" class="divide-y divide-slate-100">
                     @if($reports->count() > 0)
                         @foreach($reports as $report)
-                        <tr class="report-row" 
+                        <tr class="report-row hover:bg-slate-50/80 transition-colors cursor-pointer" 
                             data-id="{{ $report->id }}"
-                            data-disaster-type="{{ $report->disaster_type }}" 
+                            data-type="{{ $report->disaster_type }}" 
                             data-status="{{ $report->status }}" 
                             data-action-status="{{ $report->solved ? 'solved' : ($report->responses()->where('action_type', 'in_progress')->exists() ? 'in_progress' : '') }}"
                             data-barangay-id="{{ $report->barangay_id ?? '' }}"
@@ -937,106 +119,117 @@
                             data-time="{{ $report->created_at->format('h:i A') }}"
                             data-image="{{ $report->image ? Storage::url($report->image) : '' }}"
                             data-video="{{ $report->video ? Storage::url($report->video) : '' }}">
-                            <td>
-                                <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                            
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-blue-100">
                                     {{ ucfirst($report->disaster_type) }}
                                 </span>
                             </td>
-                            <td style="max-width: 300px;">{{ Str::limit($report->description, 100) }}</td>
-                            <td>{{ $report->created_at->format('M d, Y') }}</td>
-                            <td>{{ $report->created_at->format('h:i A') }}</td>
-                            <td>{{ $report->user->name }}</td>
-                            <td>
+                            
+                            <td class="px-6 py-4 max-w-xs truncate font-medium text-slate-700">
+                                {{ Str::limit($report->description, 100) }}
+                            </td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap text-slate-500">{{ $report->created_at->format('M d, Y') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-slate-500">{{ $report->created_at->format('h:i A') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-700">{{ $report->user->name }}</td>
+                            
+                            <td class="px-6 py-4 text-slate-500">
                                 @if($report->location)
                                     {{ Str::limit($report->location, 50) }}
                                 @else
-                                    {{ number_format($report->latitude, 6) }}, {{ number_format($report->longitude, 6) }}
+                                    <span class="font-mono text-xs">{{ number_format($report->latitude, 6) }}, {{ number_format($report->longitude, 6) }}</span>
                                 @endif
                             </td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; gap: 5px;">
-                                    <span>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div id="prediction-container-{{ $report->id }}" class="flex flex-col gap-1.5 items-start">
+                                    <span class="text-xs font-semibold">
                                         {{ $report->prediction ? ($report->prediction->prediction_label == 1 ? '✅ Valid' : '❌ Invalid') : '⏳ Pending...' }}
                                     </span>
-                                    
                                     <button 
                                         onclick="runAiPrediction(event, {{ $report->id }})" 
                                         id="ai-btn-{{ $report->id }}"
-                                        style="background: #6366f1; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;"
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium px-2 py-1 rounded transition-colors shadow-sm"
                                     >
                                         {{ $report->prediction ? 'Re-run AI' : 'Run AI' }}
                                     </button>
                                 </div>
                             </td>
-                            <td>
+
+                            <td id="confidence-cell-{{ $report->id }}" class="px-6 py-4 whitespace-nowrap font-semibold text-slate-700">
                                 {{ $report->prediction ? number_format($report->prediction->confidence_score * 100, 1) . '%' : '-' }}
                             </td>
-                            <td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 @if($report->status === 'pending')
-                                    <span style="background: #fef3c7; color: #92400e; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-100 inline-block">
                                         Pending
                                     </span>
                                 @elseif($report->status === 'verified')
-                                    <span style="background: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-emerald-100 inline-block">
                                         Verified
                                     </span>
                                 @else
-                                    <span style="background: #fee2e2; color: #991b1b; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-red-50 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-red-100 inline-block">
                                         Unverified
                                     </span>
                                 @endif
                             </td>
-                            <td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 @if($report->solved)
-                                    <span style="background: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-emerald-100 inline-block">
                                         Solved
                                     </span>
                                 @elseif($report->responses()->where('action_type', 'in_progress')->exists())
-                                    <span style="background: #dbeafe; color: #1e40af; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-100 inline-block">
                                         In Progress
                                     </span>
                                 @else
-                                    <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
+                                    <span class="text-slate-400 font-medium">-</span>
                                 @endif
                             </td>
-                            <td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 @if($report->barangay)
-                                    <span style="background: #ede9fe; color: #5b21b6; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-purple-100 inline-block">
                                         {{ $report->barangay->name }}
                                     </span>
                                 @else
-                                    <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
+                                    <span class="text-slate-400 font-medium">-</span>
                                 @endif
                             </td>
-                            <td>
+                            
+                            <td class="px-6 py-4 whitespace-nowrap" id="barangay-action-{{ $report->id }}">
                                 @if($report->barangay_action_status === 'approved')
-                                    <span style="background: #d1fae5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-emerald-100 inline-block">
                                         Approved
                                     </span>
                                 @elseif($report->barangay_action_status === 'disapproved')
-                                    <span style="background: #fee2e2; color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
+                                    <span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-red-100 inline-block">
                                         Disapproved
                                     </span>
                                 @else
-                                    <span style="color: #94a3b8; font-size: 0.875rem;">-</span>
+                                    <span class="text-slate-400 font-medium">-</span>
                                 @endif
                             </td>
-                            <td style="display: none;">
+                            
+                            <td class="hidden">
                                 @if($report->image)
                                     <a href="javascript:void(0)" class="view-link view-media" data-url="{{ Storage::url($report->image) }}" data-type="image" onclick="event.stopPropagation()">View</a>
                                 @else
-                                    <span style="color: #94a3b8;">N/A</span>
+                                    <span>N/A</span>
                                 @endif
                             </td>
-                            <td style="display: none;">
+                            <td class="hidden">
                                 @if($report->video)
                                     <a href="javascript:void(0)" class="view-link view-media" data-url="{{ Storage::url($report->video) }}" data-type="video" onclick="event.stopPropagation()">View</a>
                                 @else
-                                    <span style="color: #94a3b8;">N/A</span>
+                                    <span>N/A</span>
                                 @endif
                             </td>
-                            <td style="display: none;">
-                                <button class="respond-btn" data-id="{{ $report->id }}" data-type="{{ $report->disaster_type }}" data-description="{{ $report->description }}" data-location="{{ $report->location }}" data-status="{{ $report->status }}" onclick="event.stopPropagation()" style="background: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none;">
+                            <td class="hidden">
+                                <button class="respond-btn" data-id="{{ $report->id }}" data-type="{{ $report->disaster_type }}" data-description="{{ $report->description }}" data-location="{{ $report->location }}" data-status="{{ $report->status }}" onclick="event.stopPropagation()">
                                     📝 Respond
                                 </button>
                             </td>
@@ -1044,12 +237,12 @@
                         @endforeach
                     @else
                         <tr>
-                                <td colspan="10">
-                                <div class="empty-state">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <td colspan="12" class="px-6 py-12">
+                                <div class="flex flex-col items-center justify-center gap-3 text-slate-400">
+                                    <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
-                                    <p>No reports submitted yet</p>
+                                    <p class="text-sm font-medium text-slate-500">No reports submitted yet</p>
                                 </div>
                             </td>
                         </tr>
@@ -1058,47 +251,74 @@
             </table>
         </div>
     </div>
+</div>
 
-    <!-- Media Modal -->
-    <div id="mediaModal" class="media-modal">
-        <button class="media-modal-close" onclick="closeMediaModal()">×</button>
-        <div class="media-modal-content" id="mediaContent"></div>
-    </div>
 
-    <!-- Report Detail Modal -->
-    <div class="report-modal-overlay" id="reportDetailModal" onclick="closeReportDetailModal(event)">
-        <div class="report-modal" onclick="event.stopPropagation()">
-            <div class="report-modal-header">
-                <h3>Report Details</h3>
-                <button class="report-modal-close" onclick="closeReportDetailModal()">&times;</button>
-            </div>
-            <div class="report-modal-body" id="reportDetailContent">
-                <!-- Content will be populated by JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Respond Modal -->
-    <div id="respondModal" class="media-modal" style="align-items: center; justify-content: center;">
-        <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative;">
-            <button onclick="closeRespondModal()" style="position: absolute; top: 1rem; right: 1rem; background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; color: #64748b;">×</button>
+<!-- Respond Modal -->
+<div id="respondModal" class="hidden fixed inset-0 z-[500] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 transition-opacity" onclick="closeRespondModal()">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col relative overflow-hidden" onclick="event.stopPropagation()">
+        
+        <button onclick="closeRespondModal()" class="absolute top-4 right-4 sm:top-5 sm:right-5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full p-2 transition-colors z-10 focus:outline-none">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+        
+        <div class="p-6 sm:p-8 overflow-y-auto custom-scrollbar w-full">
+            <h2 class="text-xl font-bold text-slate-800 mb-6">Respond to Report</h2>
             
-            <h2 style="font-size: 1.5rem; color: #1e293b; margin-bottom: 1.5rem;">Respond to Report</h2>
-            
-            <div id="reportDetails" style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <p style="margin: 0.25rem 0; color: #64748b; font-size: 0.875rem;"><strong>Type:</strong> <span id="modalDisasterType"></span></p>
-                <p style="margin: 0.25rem 0; color: #64748b; font-size: 0.875rem;"><strong>Description:</strong> <span id="modalDescription"></span></p>
-                <p style="margin: 0.25rem 0; color: #64748b; font-size: 0.875rem;"><strong>Location:</strong> <span id="modalLocation"></span></p>
-            </div>
-
-            <form id="respondForm" method="POST" style="display: flex; flex-direction: column; gap: 1rem;">
-                @csrf
-                <input type="hidden" name="status" id="hiddenStatus">
-                <input type="hidden" name="report_id" id="hiddenReportId">
-                
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Status *</label>
-                    <select id="statusSelect" required style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Type of Disaster</div>
+                    <div id="d-type" class="text-sm font-semibold text-slate-800"></div>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date & Time</div>
+                    <div id="d-date" class="text-sm font-medium text-slate-700"></div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Description</div>
+                <div id="d-desc" class="text-sm text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-100 leading-relaxed"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reporter</div>
+                    <div id="d-reporter" class="text-sm font-semibold text-slate-800"></div>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Location</div>
+                    <div id="d-location" class="text-sm font-medium text-slate-700"></div>
+                </div>
+            </div>
+            
+            <div id="d-image-wrap" class="mb-6 hidden">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attached Image</div>
+                <img id="d-image" src="" alt="Report image" class="w-full max-h-80 object-contain rounded-xl bg-slate-100 border border-slate-200" 
+                    onerror="this.classList.add('hidden'); document.getElementById('d-image-fallback').classList.remove('hidden');"/>
+                <div id="d-image-fallback" class="hidden p-8 text-center bg-slate-50 rounded-xl border border-slate-100">
+                    <p class="text-slate-400 text-sm">Image not available</p>
+                </div>
+            </div>
+
+            <div id="d-video-wrap" class="mb-6 hidden">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attached Video</div>
+                <video id="d-video" controls class="w-full max-h-80 rounded-xl bg-black shadow-md" 
+                    onerror="this.classList.add('hidden'); document.getElementById('d-video-fallback').classList.remove('hidden');">
+                    Your browser does not support the video tag.
+                </video>
+                <div id="d-video-fallback" class="hidden p-8 text-center bg-slate-50 rounded-xl border border-slate-100">
+                    <p class="text-slate-400 text-sm">Video not available</p>
+                </div>
+            </div>
+
+            <form id="respondForm" method="POST" action="" class="flex flex-col gap-5">
+                @csrf
+                <div>
+                    <label class="block mb-1.5 text-sm font-semibold text-slate-700">Status <span class="text-red-500">*</span></label>
+                    <select id="statusSelect" name="status" required class="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow">
                         <option value="">Select status</option>
                         <option value="pending">Pending</option>
                         <option value="verified">Verified</option>
@@ -1107,8 +327,8 @@
                 </div>
 
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Action Type</label>
-                    <select name="action_type" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem;">
+                    <label class="block mb-1.5 text-sm font-semibold text-slate-700">Action Type</label>
+                    <select id="actionTypeSelect" name="action_type" class="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow">
                         <option value="">Select action type</option>
                         <option value="solved">Mark as Solved</option>
                         <option value="in_progress">In Progress</option>
@@ -1116,1171 +336,443 @@
                 </div>
 
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Response Message *</label>
-                    <textarea name="response_message" required rows="4" placeholder="Enter your response to this report..." style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem; resize: vertical;"></textarea>
+                    <label class="block mb-1.5 text-sm font-semibold text-slate-700">Response Message <span class="text-red-500">*</span></label>
+                    <textarea name="response_message" required rows="4" placeholder="Enter your response to this report..." class="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-y"></textarea>
                 </div>
 
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155;">Notes (optional)</label>
-                    <textarea name="notes" rows="3" placeholder="Additional notes..." style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem; resize: vertical;"></textarea>
+                    <label class="block mb-1.5 text-sm font-semibold text-slate-700">Notes (optional)</label>
+                    <textarea name="notes" rows="3" placeholder="Additional notes..." class="w-full bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-y"></textarea>
                 </div>
 
-                <button type="submit" style="background: #10b981; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; width: 100%;">
+                <button type="submit" class="mt-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
                     Submit Response
                 </button>
             </form>
         </div>
+        
     </div>
+</div>
+@endsection
 
-    <script>
-        function showMedia(url, type) {
-            console.log('Opening media:', type, url);
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-            content.innerHTML = '';
-            
-            if (type === 'image') {
-                const img = document.createElement('img');
-                img.src = url;
-                img.alt = 'Report Image';
-                img.style.cssText = 'max-width: 90vw; max-height: 90vh; width: auto; height: auto; border-radius: 8px;';
-                img.onerror = function() {
-                    console.error('Failed to load image:', url);
-                    content.innerHTML = `<div style="color: white; text-align: center; padding: 2rem;">Failed to load image.<br><a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Open in new tab</a></div>`;
-                };
-                content.appendChild(img);
-            } else if (type === 'video') {
-                content.innerHTML = '';
-                
-                // Create video player directly
-                const video = document.createElement('video');
-                video.controls = true;
-                video.preload = 'auto';
-                video.playsInline = true;
-                video.src = url;
-                video.style.cssText = 'max-width: 90vw; max-height: 90vh; width: 100%; height: auto; border-radius: 8px; background: #000;';
-                
-                video.addEventListener('loadedmetadata', function() {
-                    console.log('✓ Video loaded:', url, video.videoWidth + 'x' + video.videoHeight, video.duration + 's');
-                });
-                
-                content.appendChild(video);
+@push('scripts')
+
+<!-- // ── Export Scripts -->
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+    function exportTableToExcel(filename = 'Export') {
+        // 1. Get the table element
+        let table = document.querySelector("table");
+        
+        // 2. Create a clone of the table so we don't modify the actual UI
+        let cloneTable = table.cloneNode(true);
+        
+        // 3. Remove rows that are hidden by your JS filters
+        let rows = cloneTable.querySelectorAll('tr');
+        rows.forEach(row => {
+            if (row.style.display === 'none' || row.classList.contains('hidden')) {
+                row.remove();
             }
-            
-            modal.classList.add('active');
+        });
+
+        // 4. Remove hidden columns/cells (This removes your hidden image, video, and action cells)
+        let cells = cloneTable.querySelectorAll('th, td');
+        cells.forEach(cell => {
+            if (cell.style.display === 'none' || cell.classList.contains('hidden')) {
+                cell.remove();
+            }
+        });
+
+        // 5. Convert table to Excel workbook
+        // Adding { raw: true } forces Excel to treat everything as plain text, fixing the =#NUM! error
+        let wb = XLSX.utils.table_to_book(cloneTable, { 
+            sheet: "Reports",
+            raw: true 
+        });
+        
+        // 6. Download the file
+        XLSX.writeFile(wb, filename + ".xlsx");
+    }
+</script>
+
+
+
+
+
+<script>
+
+    // ── Modal Handling ───────────────────────────────────────────────────
+    function openRespondModal(row) {
+        const data = row.dataset;
+        
+        // 1. Populate the Quick Summary Text
+        // FIXED: Your TR says data-type, not data-disaster
+        document.getElementById('d-type').textContent     = data.type ? data.type.toUpperCase() : '—';
+        
+        // FIXED: You have separate data-date and data-time in the TR now, so combine them
+        document.getElementById('d-date').textContent     = (data.date || '') + ' ' + (data.time || '');
+        
+        // FIXED: Your TR says data-user, not data-reporter
+        document.getElementById('d-reporter').textContent = data.user || '—';
+        
+        document.getElementById('d-desc').textContent     = data.description || '—';
+        document.getElementById('d-location').textContent = data.location || '—';
+
+        // 2. Pre-select dropdowns based on the row's current state
+        const statusSelect = document.getElementById('statusSelect');
+        if (statusSelect) {
+            statusSelect.value = data.status || '';
         }
 
-        function closeMediaModal() {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-            modal.classList.remove('active');
-            
-            // Stop video playback if exists
-            const video = content.querySelector('video');
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-            }
-            
-            content.innerHTML = '';
+        const actionTypeSelect = document.getElementById('actionTypeSelect');
+        if (actionTypeSelect) {
+            actionTypeSelect.value = data.actionStatus || '';
         }
 
-        function openRespondModal(reportId, disasterType, description, location, currentStatus) {
-            const modal = document.getElementById('respondModal');
-            const form = document.getElementById('respondForm');
-            const statusSelect = document.getElementById('statusSelect');
-            const hiddenStatus = document.getElementById('hiddenStatus');
-            const hiddenReportId = document.getElementById('hiddenReportId');
+        // 3. Dynamically set the form's action URL to route to the correct report ID
+        const form = document.getElementById('respondForm');
+        if (form) {
+            form.action = `/admin/reports/${data.id}/respond`; 
+        }
+
+        // 4. Image Handling
+        const imgWrap     = document.getElementById('d-image-wrap');
+        const img         = document.getElementById('d-image');
+        const imgFallback = document.getElementById('d-image-fallback');
+
+        if (data.image && data.image.trim()) {
+            img.src = data.image;
+            img.classList.remove('hidden');
+            if (imgFallback) imgFallback.classList.add('hidden');
+            imgWrap.classList.remove('hidden');
+        } else {
+            img.removeAttribute('src');
+            imgWrap.classList.add('hidden');
+        }
+
+        // 5. Video Handling
+        const videoWrap     = document.getElementById('d-video-wrap');
+        const videoEl       = document.getElementById('d-video');
+        const videoFallback = document.getElementById('d-video-fallback');
+        
+        if (data.video && data.video.trim()) {
+            videoEl.src = data.video;
+            videoEl.classList.remove('hidden');
+            if (videoFallback) videoFallback.classList.add('hidden');
+            videoWrap.classList.remove('hidden');
+        } else {
+            videoEl.removeAttribute('src');
+            videoWrap.classList.add('hidden');
+        }
+
+        // 6. Toggle Tailwind classes to reveal the modal
+        const modal = document.getElementById('respondModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // 5. Close function
+    window.closeRespondModal = function() {
+        const modal = document.getElementById('respondModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Clear the response text areas automatically so they don't leak into the next click
+        const form = document.getElementById('respondForm');
+        if (form) form.reset();
+    };
+
+
+
+    // Filter reports by disaster type, status, and action status
+    function filterAdminReports() 
+    {
+        const disasterFilter      = document.getElementById('adminDisasterFilter').value;
+        const statusFilter        = document.getElementById('statusFilter').value;
+        const actionStatusFilter  = document.getElementById('actionStatusFilter').value;
+        const barangayFilter      = document.getElementById('barangayFilter').value;
+        const barangayActionFilter = document.getElementById('barangayActionFilter').value;
+        const rows = document.querySelectorAll('.report-row');
+        
+        rows.forEach(row => {
+            const disasterType   = row.getAttribute('data-disaster-type');
+            const status         = row.getAttribute('data-status');
+            const actionStatus   = row.getAttribute('data-action-status');
+            const barangayId     = row.getAttribute('data-barangay-id');
+            const barangayAction = row.getAttribute('data-barangay-action') || 'none';
             
-            // Update report details
-            document.getElementById('modalDisasterType').textContent = disasterType;
-            document.getElementById('modalDescription').textContent = description;
-            document.getElementById('modalLocation').textContent = location;
+            const matchesDisaster       = disasterFilter      === '' || disasterType   === disasterFilter;
+            const matchesStatus         = statusFilter         === '' || status         === statusFilter;
+            const matchesAction         = actionStatusFilter   === '' || actionStatus   === actionStatusFilter;
+            const matchesBarangay       = barangayFilter       === '' || barangayId     === barangayFilter;
+            const matchesBarangayAction = barangayActionFilter === '' || barangayAction === barangayActionFilter;
             
-            // Update form action and hidden report ID
-            form.action = `/admin/reports/${reportId}/respond`;
-            hiddenReportId.value = reportId;
-            
-            // Handle status field based on current status
-            if (currentStatus === 'verified' || currentStatus === 'unverified') {
-                // Auto-fill and disable status field if already verified/unverified
-                statusSelect.value = currentStatus;
-                statusSelect.disabled = true;
-                statusSelect.style.background = '#f1f5f9';
-                statusSelect.style.cursor = 'not-allowed';
-                // Set hidden field with the status value
-                hiddenStatus.value = currentStatus;
+            if (matchesDisaster && matchesStatus && matchesAction && matchesBarangay && matchesBarangayAction) {
+                row.classList.remove('hidden');
             } else {
-                // Enable status selection for pending reports
-                statusSelect.disabled = false;
-                statusSelect.value = '';
-                statusSelect.style.background = 'white';
-                statusSelect.style.cursor = 'pointer';
-                hiddenStatus.value = '';
+                row.classList.add('hidden');
             }
-            
-            // Show modal
-            modal.classList.add('active');
-            modal.style.display = 'flex';
-        }
+        });
+    }
 
-        function closeRespondModal() {
-            const modal = document.getElementById('respondModal');
-            modal.classList.remove('active');
-            modal.style.display = 'none';
-            
-            // Reset form
-            document.getElementById('respondForm').reset();
-        }
 
-        // Close modal when clicking outside
-        document.addEventListener('DOMContentLoaded', function() {
-            const mediaModal = document.getElementById('mediaModal');
-            const respondModal = document.getElementById('respondModal');
-            
-            if (mediaModal) {
-                mediaModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeMediaModal();
-                    }
-                });
-            }
 
-            if (respondModal) {
-                respondModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeRespondModal();
-                    }
-                });
-            }
 
-            // Check if we need to auto-open a report modal from notification click
-            const reportIdToOpen = sessionStorage.getItem('openReportModal');
-            if (reportIdToOpen) {
-                sessionStorage.removeItem('openReportModal');
-                
-                // Wait a bit for the page to fully load
-                setTimeout(() => {
-                    const reportRow = document.querySelector(`.report-row[data-id="${reportIdToOpen}"]`);
-                    if (reportRow) {
-                        // Scroll to the row
-                        reportRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Open the modal
-                        openReportDetailModal(reportRow);
-                    }
-                }, 300);
-            }
+    document.addEventListener('DOMContentLoaded', () => {
 
-            // Event delegation for view-media links (works for existing and dynamically added rows)
-            document.body.addEventListener('click', function(e) {
-                if (e.target.classList.contains('view-media')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const url = e.target.getAttribute('data-url');
-                    const type = e.target.getAttribute('data-type');
-                    if (url && type) {
-                        showMedia(url, type);
-                    }
+        const tableBody = document.getElementById('reportsTableBody');
+        
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                // Safety check: Ignore clicks on the "Run AI" button or any links inside the row
+                if (e.target.closest('button') || e.target.closest('a')) {
+                    return; 
                 }
-            });
 
-            // Event delegation for respond buttons (works for existing and dynamically added rows)
-            document.body.addEventListener('click', function(e) {
-                if (e.target.classList.contains('respond-btn')) {
-                    e.stopPropagation();
-                    const id = e.target.getAttribute('data-id');
-                    const type = e.target.getAttribute('data-type');
-                    const description = e.target.getAttribute('data-description');
-                    const location = e.target.getAttribute('data-location');
-                    const status = e.target.getAttribute('data-status');
-                    if (id) {
-                        openRespondModal(id, type, description, location, status);
-                    }
-                }
-            });
-
-            // Event delegation for report row clicks (open modal when clicking row, but not buttons/links)
-            document.body.addEventListener('click', function(e) {
-                // Check if click is on a report row
+                // Find the clicked row
                 const row = e.target.closest('.report-row');
-                if (row && !e.target.closest('.view-media') && !e.target.closest('.respond-btn')) {
-                    openReportDetailModal(row);
-                }
-            });
-
-            // Sync status select with hidden input when changed
-            const statusSelect = document.getElementById('statusSelect');
-            const hiddenStatus = document.getElementById('hiddenStatus');
-            if (statusSelect && hiddenStatus) {
-                statusSelect.addEventListener('change', function() {
-                    hiddenStatus.value = this.value;
-                });
-            }
-
-            // Handle form submission with AJAX for success popup
-            const respondForm = document.getElementById('respondForm');
-            if (respondForm) {
-                respondForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = new FormData(this);
-                    const actionUrl = this.action;
-                    const actionType = formData.get('action_type');
-                    const reportId = formData.get('report_id');
-                    
-                    // Submit form via AJAX
-                    fetch(actionUrl, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            // Close modal
-                            closeRespondModal();
-                            
-                            // If marked as solved, remove the row from the table
-                            if (actionType === 'solved') {
-                                const reportRow = document.querySelector(`tr[data-id="${reportId}"]`);
-                                if (reportRow) {
-                                    reportRow.style.transition = 'opacity 0.3s ease-out';
-                                    reportRow.style.opacity = '0';
-                                    setTimeout(() => {
-                                        reportRow.remove();
-                                    }, 300);
-                                }
-                                showSuccessPopup('Report marked as solved and moved to Solved page!');
-                            } else {
-                                showSuccessPopup('Response submitted successfully!');
-                                // Reload page after 2 seconds to show updated data
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 2000);
-                            }
-                        } else {
-                            alert('Failed to submit response. Please try again.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error submitting response:', error);
-                        alert('An error occurred. Please try again.');
-                    });
-                });
-            }
-        });
-
-        // Show success popup
-        function showSuccessPopup(message) {
-            const popup = document.createElement('div');
-            popup.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-                padding: 1rem 1.5rem;
-                border-radius: 12px;
-                box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
-                z-index: 10001;
-                display: flex;
-                align-items: center;
-                gap: 0.75rem;
-                animation: slideInRight 0.3s ease-out;
-                font-weight: 600;
-                font-size: 0.9375rem;
-            `;
-            popup.innerHTML = `
-                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>${message}</span>
-            `;
-            
-            document.body.appendChild(popup);
-            
-            // Auto-remove after 3 seconds
-            setTimeout(() => {
-                popup.style.animation = 'slideInRight 0.3s ease-out reverse';
-                setTimeout(() => popup.remove(), 300);
-            }, 3000);
-        }
-
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeMediaModal();
-                closeRespondModal();
-            }
-        });
-
-        // Filter reports by disaster type, status, and action status
-        function filterAdminReports() {
-            const disasterFilter      = document.getElementById('adminDisasterFilter').value;
-            const statusFilter        = document.getElementById('statusFilter').value;
-            const actionStatusFilter  = document.getElementById('actionStatusFilter').value;
-            const barangayFilter      = document.getElementById('barangayFilter').value;
-            const barangayActionFilter = document.getElementById('barangayActionFilter').value;
-            const rows = document.querySelectorAll('.report-row');
-            
-            rows.forEach(row => {
-                const disasterType   = row.getAttribute('data-disaster-type');
-                const status         = row.getAttribute('data-status');
-                const actionStatus   = row.getAttribute('data-action-status');
-                const barangayId     = row.getAttribute('data-barangay-id');
-                const barangayAction = row.getAttribute('data-barangay-action') || 'none';
-                
-                const matchesDisaster       = disasterFilter      === '' || disasterType   === disasterFilter;
-                const matchesStatus         = statusFilter         === '' || status         === statusFilter;
-                const matchesAction         = actionStatusFilter   === '' || actionStatus   === actionStatusFilter;
-                const matchesBarangay       = barangayFilter       === '' || barangayId     === barangayFilter;
-                const matchesBarangayAction = barangayActionFilter === '' || barangayAction === barangayActionFilter;
-                
-                if (matchesDisaster && matchesStatus && matchesAction && matchesBarangay && matchesBarangayAction) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+                if (row) {
+                    openRespondModal(row);
                 }
             });
         }
 
-        // ========================================
-        // REAL-TIME NOTIFICATION SYSTEM (PUSHER + LARAVEL ECHO)
-        // ========================================
 
-        console.log('🚀 Initializing Real-Time Notification System...');
-        console.log('Pusher Key:', '{{ config("broadcasting.connections.pusher.key") }}');
-        console.log('Pusher Cluster:', '{{ config("broadcasting.connections.pusher.options.cluster") }}');
-
-        // Check if Pusher credentials are set
-        const pusherKey = '{{ config("broadcasting.connections.pusher.key") }}';
-        if (pusherKey === 'your_app_key' || !pusherKey) {
-            console.warn('⚠️ PUSHER CREDENTIALS NOT SET!');
-            console.warn('Real-time notifications are disabled. To enable:');
-            console.warn('1. Go to https://dashboard.pusher.com/');
-            console.warn('2. Create an account and app (free)');
-            console.warn('3. Copy credentials to .env file');
-            console.warn('4. Run: php artisan config:clear');
-            console.warn('5. Refresh this page');
-        } else {
-            console.log('✓ Pusher credentials found');
-        }
-
-        // Initialize Laravel Echo with Pusher
-        try {
-            window.Echo = new Echo({
-                broadcaster: 'pusher',
-                key: pusherKey,
-                cluster: '{{ config("broadcasting.connections.pusher.options.cluster") }}',
-                forceTLS: true,
-                encrypted: true,
-            });
-            console.log('✓ Laravel Echo initialized successfully');
-        } catch (error) {
-            console.error('❌ Failed to initialize Echo:', error);
-        }
-
-        // Initialize notification count
-        let notificationCount = 0;
-        const notificationBadge = document.getElementById('notificationBadge');
-        let notificationsList = [];
-
-        // Load notifications from database on page load
-        function loadNotifications() {
-            fetch('{{ route('admin.notifications.get') }}')
-                .then(response => response.json())
-                .then(data => {
-                    // Get last badge reset timestamp from localStorage
-                    const lastResetTime = localStorage.getItem('notificationsBadgeReset');
-                    
-                    notificationsList = data.notifications.map(notif => ({
-                        id: notif.report_id,
-                        disaster_type: notif.disaster_type,
-                        user_name: notif.user_name,
-                        time_ago: notif.time_ago,
-                        read: lastResetTime ? true : notif.is_read, // Mark as read if badge was reset
-                        notification_id: notif.id
-                    }));
-                    updateNotificationBadge();
-                })
-                .catch(error => console.error('Error loading notifications:', error));
-        }
-
-        // Load notifications on page load
-        loadNotifications();
-
-        // Listen for new report submissions on the admin-notifications channel
+        // Check if Echo is available
         if (window.Echo) {
-            console.log('✓ Subscribing to admin-notifications channel...');
             
-            const channel = window.Echo.channel('admin-notifications');
-            
-            channel.listen('.report.submitted', (event) => {
-                console.log('🔔 NEW REPORT RECEIVED:', event);
-                
-                // Clear the badge reset flag since there's a new notification
-                localStorage.removeItem('notificationsBadgeReset');
-                
-                // Show real-time notification popup
-                showRealtimeNotification(event);
-                
-                // Add to notifications list
-                notificationsList.unshift({
-                    id: event.id,
-                    disaster_type: event.disaster_type_name,
-                    user_name: event.user_name,
-                    time_ago: 'Just now',
-                    read: false
-                });
-                
-                // Keep only last 50 notifications
-                if (notificationsList.length > 50) {
-                    notificationsList = notificationsList.slice(0, 50);
-                }
-                
-                // Update notification badge
-                updateNotificationBadge();
-                
-                // Add new report to the table automatically
-                addReportToTable(event);
-                
-                // Play notification sound
-                playNotificationSound();
-            });
-            
-            console.log('✓ Listening for .report.submitted events on admin-notifications channel');
-        } else {
-            console.warn('⚠️ Laravel Echo not loaded - Real-time notifications disabled');
-        }
-
-        /**
-         * Show real-time notification popup
-         */
-        // Track shown notifications using localStorage
-        function hasShownNotification(reportId) {
-            const shown = localStorage.getItem('shown_notifications') || '[]';
-            const shownIds = JSON.parse(shown);
-            return shownIds.includes(reportId);
-        }
-
-        function markNotificationAsShown(reportId) {
-            const shown = localStorage.getItem('shown_notifications') || '[]';
-            let shownIds = JSON.parse(shown);
-            shownIds.push(reportId);
-            // Keep only last 100 notifications to prevent storage overflow
-            if (shownIds.length > 100) {
-                shownIds = shownIds.slice(-100);
-            }
-            localStorage.setItem('shown_notifications', JSON.stringify(shownIds));
-        }
-
-        function showRealtimeNotification(report) {
-            // Check if already shown
-            if (hasShownNotification(report.id)) {
-                return;
-            }
-
-            const notification = document.createElement('div');
-            notification.className = 'realtime-notification';
-            notification.innerHTML = `
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px; flex-shrink: 0;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                <div>
-                    <strong>New Report Submitted!</strong>
-                    <br>
-                    <small>${report.disaster_type_name} - ${report.location || 'Location unavailable'}</small>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            markNotificationAsShown(report.id);
-            
-            // Remove notification after 5 seconds with slide-out animation
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-in';
-                setTimeout(() => notification.remove(), 300);
-            }, 5000);
-        }
-
-        /**
-         * Add new report to the table dynamically
-         */
-        function addReportToTable(report) {
-            const tbody = document.querySelector('.reports-table tbody');
-            if (!tbody) return;
-            
-            // Create new table row
-            const row = document.createElement('tr');
-            row.className = 'report-row';
-            row.setAttribute('data-id', report.id);
-            row.setAttribute('data-disaster-type', report.disaster_type);
-            row.setAttribute('data-status', report.status);
-            row.setAttribute('data-action-status', report.action_status || '');
-            row.setAttribute('data-description', report.description);
-            row.setAttribute('data-user', report.user_name);
-            row.setAttribute('data-location', report.location || '');
-            row.setAttribute('data-date', report.formatted_date);
-            row.setAttribute('data-time', report.formatted_time);
-            row.setAttribute('data-image', report.image || '');
-            row.setAttribute('data-video', report.video || '');
-            
-            // Build status badge
-            let statusBadge = '';
-            if (report.status === 'pending') {
-                statusBadge = '<span class="badge-pending">Pending</span>';
-            } else if (report.status === 'verified') {
-                statusBadge = '<span class="badge-verified">Verified</span>';
-            } else if (report.status === 'unverified') {
-                statusBadge = '<span class="badge-unverified">Unverified</span>';
-            }
-            
-            // Build action status badge
-            let actionBadge = '<span style="color: #94a3b8; font-size: 0.875rem;">-</span>';
-            if (report.action_status === 'solved') {
-                actionBadge = '<span class="badge-solved">Solved</span>';
-            } else if (report.action_status === 'in_progress') {
-                actionBadge = '<span class="badge-in-progress">In Progress</span>';
-            }
-            
-            // Build image cell
-            let imageCell = '<span style="color: #94a3b8;">N/A</span>';
-            if (report.image) {
-                imageCell = `<a href="javascript:void(0)" class="view-link view-media" data-url="${report.image}" data-type="image">View</a>`;
-            }
-            
-            // Build video cell
-            let videoCell = '<span style="color: #94a3b8;">N/A</span>';
-            if (report.video) {
-                videoCell = `<a href="javascript:void(0)" class="view-link view-media" data-url="${report.video}" data-type="video">View</a>`;
-            }
-            
-            // Populate row HTML
-            row.innerHTML = `
-                <td>
-                    <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
-                        ${report.disaster_type_name}
-                    </span>
-                </td>
-                <td style="max-width: 300px;">${report.description.substring(0, 100)}${report.description.length > 100 ? '...' : ''}</td>
-                <td>${report.formatted_date}</td>
-                <td>${report.formatted_time}</td>
-                <td>${report.user_name}</td>
-                <td>${report.location || 'N/A'}</td>
-                <td>${statusBadge}</td>
-                <td>${actionBadge}</td>
-                <td style="display: none;">${imageCell}</td>
-                <td style="display: none;">${videoCell}</td>
-                <td style="display: none;">
-                    <button class="respond-btn" data-id="${report.id}" data-type="${report.disaster_type}" data-description="${report.description.replace(/"/g, '&quot;')}" data-location="${report.location || 'N/A'}" data-status="${report.status}" style="background: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none;">
-                        📝 Respond
-                    </button>
-                </td>
-            `;
-            
-            // Add highlight effect for new row
-            row.style.backgroundColor = '#fef3c7';
-            
-            // Insert at the top of the table
-            tbody.insertBefore(row, tbody.firstChild);
-            
-            // Remove highlight after 3 seconds
-            setTimeout(() => {
-                row.style.transition = 'background-color 1s ease';
-                row.style.backgroundColor = '';
-            }, 3000);
-        }
-
-        /**
-         * Play notification sound
-         */
-        function playNotificationSound() {
-            try {
-                // Simple notification beep using Web Audio API
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.5);
-            } catch (e) {
-                console.warn('Could not play notification sound:', e);
-            }
-        }
-
-        // Notification dropdown management
-        function toggleNotificationDropdown(event) {
-            event.stopPropagation();
-            const dropdown = document.getElementById('notificationDropdown');
-            dropdown.classList.toggle('show');
-            
-            if (dropdown.classList.contains('show')) {
-                populateNotifications();
-                // Mark all notifications as read when opening dropdown
-                markAllAsRead();
-            }
-        }
-
-        function markAllAsRead() {
-            // Mark all unread notifications as read in the list
-            notificationsList.forEach(notif => {
-                if (!notif.read) {
-                    notif.read = true;
-                }
-            });
-            
-            // Update badge to show 0
-            updateNotificationBadge();
-            
-            // Set flag in localStorage to persist across page reloads and sync across all pages
-            localStorage.setItem('notificationsBadgeReset', 'true');
-            
-            // Mark all as read in database
-            fetch('/admin/notifications/read-all', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            }).catch(error => console.error('Error marking all as read:', error));
-        }
-
-        function populateNotifications() {
-            const listContainer = document.getElementById('notificationList');
-            
-            if (notificationsList.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="notification-empty">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <div>No new notifications</div>
-                    </div>
-                `;
-                return;
-            }
-
-            listContainer.innerHTML = notificationsList.map(notif => `
-                <div class="notification-item ${notif.read ? '' : 'unread'}\" onclick="viewReport(${notif.id})">
-                    <div class="notification-icon">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                        </svg>
-                    </div>
-                    <div class="notification-content">
-                        <div class="notification-title">New Report Submitted</div>
-                        <div class="notification-text">${notif.disaster_type} - ${notif.user_name}</div>
-                        <div class="notification-time">${notif.time_ago}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function viewReport(reportId) {
-            // Mark as read
-            const notif = notificationsList.find(n => n.id === reportId);
-            if (notif && !notif.read) {
-                notif.read = true;
-                
-                // Mark as read in database
-                if (notif.notification_id) {
-                    fetch(`/admin/notifications/${notif.notification_id}/read`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            // Listen to the 'reports' channel we defined in the Event
+            window.Echo.channel('reports')
+                .listen('.action.updated', (event) => {
+                    
+                    // 1. Find the specific table cell using the ID we just added
+                    const actionCell = document.getElementById(`barangay-action-${event.reportId}`);
+                    
+                    if (actionCell) {
+                        // 2. Change the text and HTML styling based on the new status
+                        if (event.status === 'approved') {
+                            actionCell.innerHTML = `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-emerald-100 inline-block">Approved</span>`;
+                        } else if (event.status === 'disapproved') {
+                            actionCell.innerHTML = `<span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-red-100 inline-block">Disapproved</span>`;
+                        } else {
+                            actionCell.innerHTML = `<span class="text-slate-400 font-medium">-</span>`;
                         }
-                    }).catch(error => console.error('Error marking notification as read:', error));
-                }
-            }
-            
-            // Close dropdown
-            document.getElementById('notificationDropdown').classList.remove('show');
-            
-            // Find and highlight the report row
-            const rows = document.querySelectorAll('.report-row');
-            rows.forEach(row => {
-                const respondBtn = row.querySelector('.respond-btn');
-                if (respondBtn && respondBtn.getAttribute('data-id') == reportId) {
-                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    row.style.backgroundColor = '#fef3c7';
-                    setTimeout(() => {
-                        row.style.transition = 'background-color 1s ease';
-                        row.style.backgroundColor = '';
-                    }, 2000);
-                }
-            });
-            
-            // Update notification count
-            updateNotificationBadge();
-        }
 
-        function updateNotificationBadge() {
-            const unreadCount = notificationsList.filter(n => !n.read).length;
-            notificationCount = unreadCount;
-            notificationBadge.textContent = unreadCount;
-            if (unreadCount > 0) {
-                notificationBadge.classList.add('show');
-            } else {
-                notificationBadge.classList.remove('show');
-            }
-        }
+                        const row = actionCell.closest('tr');
+                        if (row) {
+                            row.dataset.barangayAction = event.status || 'none';
+                            
+                            row.classList.add('bg-yellow-50', 'transition-colors', 'duration-500');
+                            
+                            setTimeout(() => {
+                                row.classList.remove('bg-yellow-50');
+                            }, 2000); 
+                        }
+                    }
+                })
+                .listen('.prediction.completed', (event) => {
+                    console.log('🤖 AI Prediction Finished:', event);
+                    
+                    // 1. Target the container using the ID
+                    const container = document.getElementById(`prediction-container-${event.report_id}`);
+                    
+                    if (container) {
+                        console.log('Found container, updating...'); // Debugging step
+                        const labelText = event.is_valid ? '✅ Valid' : '❌ Invalid';
+                        
+                        container.innerHTML = `
+                            <span class="text-xs font-semibold">${labelText}</span>
+                            <button 
+                                onclick="runAiPrediction(event, ${event.report_id})" 
+                                id="ai-btn-${event.report_id}"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium px-2 py-1 rounded transition-colors shadow-sm"
+                            >
+                                Re-run AI
+                            </button>
+                        `;
+                    } else {
+                        console.warn(`Could not find element: prediction-container-${event.report_id}`);
+                    }
 
-        // Listen for storage changes to sync badge across pages
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'notificationsBadgeReset') {
-                // Reset badge to 0 when another page marks all as read
-                notificationsList.forEach(notif => notif.read = true);
-                updateNotificationBadge();
-            }
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('notificationDropdown');
-            const bell = document.querySelector('.notification-bell');
-            if (dropdown && bell && !bell.contains(event.target)) {
-                dropdown.classList.remove('show');
-            }
-        });
-
-        function toggleNotificationDropdown(event) {
-            event.stopPropagation();
-            const dropdown = document.getElementById('notificationDropdown');
-            dropdown.classList.toggle('show');
-            
-            if (dropdown.classList.contains('show')) {
-                populateNotifications();
-            }
-        }
-
-        function populateNotifications() {
-            const listContainer = document.getElementById('notificationList');
-            
-            if (notificationsList.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="notification-empty">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <div>No new notifications</div>
-                    </div>
-                `;
-                return;
-            }
-
-            listContainer.innerHTML = notificationsList.map(notif => `
-                <div class="notification-item ${notif.read ? '' : 'unread'}" onclick="viewReport(${notif.id})">
-                    <div class="notification-icon">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                        </svg>
-                    </div>
-                    <div class="notification-content">
-                        <div class="notification-title">New Report Submitted</div>
-                        <div class="notification-text">${notif.disaster_type} - ${notif.user_name}</div>
-                        <div class="notification-time">${notif.time_ago}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function viewReport(reportId) {
-            // Mark as read
-            const notif = notificationsList.find(n => n.id === reportId);
-            if (notif) {
-                notif.read = true;
-            }
-            
-            // Close dropdown
-            document.getElementById('notificationDropdown').classList.remove('show');
-            
-            // Find and highlight the report row
-            const rows = document.querySelectorAll('.report-row');
-            rows.forEach(row => {
-                const viewButtons = row.querySelectorAll('[onclick]');
-                viewButtons.forEach(btn => {
-                    const onclick = btn.getAttribute('onclick');
-                    if (onclick && onclick.includes(reportId)) {
-                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        row.style.backgroundColor = '#fef3c7';
-                        setTimeout(() => {
-                            row.style.transition = 'background-color 1s ease';
-                            row.style.backgroundColor = '';
-                        }, 2000);
+                    // 2. Update Confidence
+                    const scoreCell = document.getElementById(`confidence-cell-${event.report_id}`);
+                    if (scoreCell) {
+                        scoreCell.innerText = event.confidence_formatted;
+                        scoreCell.classList.add('bg-emerald-50', 'transition-colors', 'duration-500');
+                        setTimeout(() => scoreCell.classList.remove('bg-emerald-50'), 2000);
                     }
                 });
-            });
-            
-            // Update notification count
-            updateNotificationBadge();
-        }
 
-        function updateNotificationBadge() {
-            const unreadCount = notificationsList.filter(n => !n.read).length;
-            notificationCount = unreadCount;
-            notificationBadge.textContent = unreadCount;
-            if (unreadCount > 0) {
-                notificationBadge.style.display = 'block';
-            } else {
-                notificationBadge.style.display = 'none';
-            }
-        }
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('notificationDropdown');
-            const bell = document.querySelector('.notification-bell');
-            if (dropdown && !bell.contains(event.target)) {
-                dropdown.classList.remove('show');
-            }
-        });
+            
+            window.addReportToTable = function(report) {
+                const tbody = document.getElementById('reportsTableBody');
+                if (!tbody) return;
 
-        // Log Echo connection status
-        if (window.Echo && window.Echo.connector && window.Echo.connector.pusher) {
-            window.Echo.connector.pusher.connection.bind('connected', function() {
-                console.log('✓ Pusher connected successfully');
-            });
-            
-            window.Echo.connector.pusher.connection.bind('disconnected', function() {
-                console.warn('⚠️ Pusher disconnected');
-            });
-            
-            window.Echo.connector.pusher.connection.bind('error', function(err) {
-                console.error('✗ Pusher connection error:', err);
-            });
-        }
-
-        // ========================================
-        // POLLING FALLBACK (when Pusher not configured)
-        // ========================================
-        
-        let lastReportId = null;
-        let pollingInterval = null;
-        
-        // Get the highest report ID currently displayed
-        function getLatestReportId() {
-            const rows = document.querySelectorAll('.report-row');
-            if (rows.length === 0) return 0;
-            
-            const ids = Array.from(rows).map(row => {
-                const respondBtn = row.querySelector('.respond-btn');
-                return respondBtn ? parseInt(respondBtn.getAttribute('data-id')) : 0;
-            });
-            
-            return Math.max(...ids);
-        }
-        
-        // Check for new reports via API
-        async function checkForNewReports() {
-            try {
-                const response = await fetch('{{ route("admin.reports.check-new") }}?since=' + lastReportId);
-                const data = await response.json();
-                
-                if (data.new_reports && data.new_reports.length > 0) {
-                    console.log('📥 Found ' + data.new_reports.length + ' new report(s)');
-                    
-                    data.new_reports.forEach(report => {
-                        // Show notification
-                        showRealtimeNotification(report);
-                        
-                        // Update badge
-                        notificationCount++;
-                        notificationBadge.textContent = notificationCount;
-                        notificationBadge.classList.add('show');
-                        
-                        // Add to table
-                        addReportToTable(report);
-                        
-                        // Play sound
-                        playNotificationSound();
-                    });
-                    
-                    // Update last report ID
-                    lastReportId = getLatestReportId();
+                // 1. Remove the "No reports submitted yet" placeholder if it exists
+                const emptyPlaceholder = tbody.querySelector('td[colspan="12"]');
+                if (emptyPlaceholder) {
+                    emptyPlaceholder.closest('tr').remove();
                 }
-            } catch (error) {
-                console.error('Error checking for new reports:', error);
-            }
-        }
-        
-        // Start polling if Pusher not configured
-        if (pusherKey === 'your_app_key' || !pusherKey) {
-            console.log('🔄 Starting polling fallback (checking every 3 seconds)');
-            lastReportId = getLatestReportId();
-            
-            // Check for new reports every 3 seconds
-            pollingInterval = setInterval(checkForNewReports, 3000);
-        } else {
-            console.log('✓ Using Pusher real-time notifications (no polling needed)');
-        }
 
-        // =====================================================
-        // BARANGAY ACTION STATUS POLLING (always active)
-        // Updates the Barangay Action column when a barangay
-        // saves approved / disapproved — no page reload needed.
-        // =====================================================
-        let barangayPollTime = '{{ now()->toISOString() }}';
+                // 2. Helper functions for formatting (replicating Laravel's Str::limit and number_format)
+                const truncate = (str, length) => str && str.length > length ? str.substring(0, length) + '...' : (str || '');
+                const formatCoordinate = (coord) => coord ? parseFloat(coord).toFixed(6) : '0.000000';
+                const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
-        function pollBarangayUpdates() {
-            fetch('{{ route("admin.reports.barangay-updates") }}?since=' + encodeURIComponent(barangayPollTime), {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(r => r.json())
-            .then(data => {
-                barangayPollTime = data.server_time;
-                (data.reports || []).forEach(updateBarangayActionCell);
-            })
-            .catch(() => {});
-        }
+                // 3. Set default values to prevent undefined errors
+                const disasterType = report.disaster_type || 'unknown';
+                const description = report.description || '';
+                const userName = report.user_name || (report.user ? report.user.name : 'Unknown User');
+                const locationStr = report.location ? truncate(report.location, 50) : 
+                                `<span class="font-mono text-xs">${formatCoordinate(report.latitude)}, ${formatCoordinate(report.longitude)}</span>`;
+                
+                // Action status logic (replicating your Blade logic)
+                let actionStatus = '';
+                if (report.solved) actionStatus = 'solved';
+                else if (report.has_in_progress_responses) actionStatus = 'in_progress';
 
-        function updateBarangayActionCell(report) {
-            const row = document.querySelector('.report-row[data-id="' + report.id + '"]');
-            if (!row) return;
+                // 4. Create the new row
+                const tr = document.createElement('tr');
+                
+                // Add standard classes plus a highlight color that will fade out
+                tr.className = 'report-row bg-emerald-50 hover:bg-slate-50/80 transition-colors duration-1000 cursor-pointer'; 
+                
+                // Replicate all your Blade data-* attributes
+                tr.dataset.id = report.id;
+                tr.dataset.type = disasterType;
+                tr.dataset.status = report.status || 'pending';
+                tr.dataset.actionStatus = actionStatus;
+                tr.dataset.barangayId = report.barangay_id || '';
+                tr.dataset.barangayAction = report.barangay_action_status || 'none';
+                tr.dataset.description = description;
+                tr.dataset.user = userName;
+                tr.dataset.location = report.location || `${formatCoordinate(report.latitude)}, ${formatCoordinate(report.longitude)}`;
+                tr.dataset.date = report.formatted_date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                tr.dataset.time = report.formatted_time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                tr.dataset.image = report.image_url || '';
+                tr.dataset.video = report.video_url || '';
 
-            const prev = row.getAttribute('data-barangay-action') || 'none';
-            if (prev === report.barangay_action) return; // nothing changed
-
-            row.setAttribute('data-barangay-action', report.barangay_action);
-
-            // Barangay Action is the 10th visible TD (index 9)
-            const tds = row.querySelectorAll('td');
-            if (!tds[9]) return;
-
-            const badgeMap = {
-                approved:    '<span style="background:#d1fae5;color:#065f46;padding:0.5rem 0.75rem;border-radius:6px;font-size:0.8rem;font-weight:600;display:inline-block;">Approved</span>',
-                disapproved: '<span style="background:#fee2e2;color:#991b1b;padding:0.5rem 0.75rem;border-radius:6px;font-size:0.8rem;font-weight:600;display:inline-block;">Disapproved</span>',
-                none:        '<span style="color:#94a3b8;font-size:0.875rem;">-</span>',
-            };
-            tds[9].innerHTML = badgeMap[report.barangay_action] || badgeMap.none;
-
-            // Add to notification bell list using the same structure as other notifications
-            const label = report.barangay_action === 'approved' ? '✅ Barangay Approved' : '❌ Barangay Disapproved';
-            notificationsList.unshift({
-                id: report.id,                          // numeric — viewReport() uses this to highlight row
-                disaster_type: report.disaster_type_name,
-                user_name: report.barangay_name || 'Barangay',
-                time_ago: 'Just now',
-                read: false,
-            });
-            if (notificationsList.length > 50) notificationsList.pop();
-            notificationCount++;
-            notificationBadge.textContent = notificationCount;
-            notificationBadge.style.display = 'block';
-            populateNotifications();
-
-            // Toast pop-up
-            const toast = document.createElement('div');
-            toast.className = 'realtime-notification';
-            toast.innerHTML = `
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;flex-shrink:0;">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <div>
-                    <strong>${label}</strong><br>
-                    <small>${report.disaster_type_name} — ${report.barangay_name || 'Barangay'}</small>
-                </div>`;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease-in';
-                setTimeout(() => toast.remove(), 300);
-            }, 5000);
-
-            // Yellow flash on the row
-            row.style.transition = 'none';
-            row.style.backgroundColor = '#fef9c3';
-            setTimeout(() => { row.style.transition = 'background-color 1.2s'; row.style.backgroundColor = ''; }, 2500);
-
-            // Beep
-            playNotificationSound();
-        }
-
-        // Poll every 4 seconds regardless of Pusher
-        pollBarangayUpdates();
-        setInterval(pollBarangayUpdates, 4000);
-
-        // Report Detail Modal Functions
-        function openReportDetailModal(row) {
-            const reportData = {
-                id: row.getAttribute('data-id'),
-                disasterType: row.getAttribute('data-disaster-type'),
-                description: row.getAttribute('data-description'),
-                user: row.getAttribute('data-user'),
-                location: row.getAttribute('data-location'),
-                date: row.getAttribute('data-date'),
-                time: row.getAttribute('data-time'),
-                status: row.getAttribute('data-status'),
-                actionStatus: row.getAttribute('data-action-status'),
-                imageUrl: row.getAttribute('data-image'),
-                videoUrl: row.getAttribute('data-video')
-            };
-
-            // Get status and action status badges from the row
-            const cells = row.querySelectorAll('td');
-            const statusBadge = cells[6].innerHTML;
-            const actionBadge = cells[7].innerHTML;
-
-            // Populate modal content
-            const modalContent = document.getElementById('reportDetailContent');
-            modalContent.innerHTML = `
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Disaster Type</div>
-                    <div class="report-detail-value">
-                        <span style="background: #dbeafe; color: #1e40af; padding: 0.5rem 1rem; border-radius: 12px; font-weight: 600;">
-                            ${reportData.disasterType.charAt(0).toUpperCase() + reportData.disasterType.slice(1)}
+                // 5. Construct the inner HTML
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-blue-100">
+                            ${capitalize(disasterType)}
                         </span>
-                    </div>
-                </div>
-                
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Description</div>
-                    <div class="report-detail-value">${reportData.description}</div>
-                </div>
-                
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Reported By</div>
-                    <div class="report-detail-value">${reportData.user}</div>
-                </div>
-                
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Location</div>
-                    <div class="report-detail-value">${reportData.location}</div>
-                </div>
-                
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Date & Time</div>
-                    <div class="report-detail-value">${reportData.date} at ${reportData.time}</div>
-                </div>
-                
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Status</div>
-                    <div class="report-detail-value">${statusBadge}</div>
-                </div>
-                
-                <div class="report-detail-row">
-                    <div class="report-detail-label">Action Status</div>
-                    <div class="report-detail-value">${actionBadge}</div>
-                </div>
-                
-                ${reportData.imageUrl ? `
-                    <div class="report-detail-row">
-                        <div class="report-detail-label">Image</div>
-                        <div class="report-media-preview">
-                            <img src="${reportData.imageUrl}" alt="Report Image" onclick="openImageFullscreen('${reportData.imageUrl}')" style="cursor: pointer;">
+                    </td>
+                    
+                    <td class="px-6 py-4 max-w-xs truncate font-medium text-slate-700">
+                        ${truncate(description, 100)}
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-500">${tr.dataset.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-500">${tr.dataset.time}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-700">${userName}</td>
+                    
+                    <td class="px-6 py-4 text-slate-500">
+                        ${locationStr}
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div id="prediction-container-${report.id}" class="flex flex-col gap-1.5 items-start">
+                            <span class="text-xs font-semibold text-slate-500">⏳ Pending...</span>
+                            <button onclick="runAiPrediction(event, ${report.id})" id="ai-btn-${report.id}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium px-2 py-1 rounded transition-colors shadow-sm">
+                                Run AI
+                            </button>
                         </div>
-                    </div>
-                ` : ''}
-                
-                ${reportData.videoUrl ? `
-                    <div class="report-detail-row">
-                        <div class="report-detail-label">Video</div>
-                        <div class="report-media-preview">
-                            <video controls src="${reportData.videoUrl}"></video>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                    <button onclick="closeReportDetailModal(); openRespondModal(${reportData.id}, '${reportData.disasterType}', \`${reportData.description.replace(/`/g, '\\`')}\`, '${reportData.location}', '${reportData.status}');" style="flex: 1; background: #10b981; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
-                        📝 Respond to Report
-                    </button>
-                    <button onclick="closeReportDetailModal()" style="flex: 1; background: #6b7280; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;">
-                        Close
-                    </button>
-                </div>
-            `;
+                    </td>
+                    
+                    <td id="confidence-cell-${report.id}" class="px-6 py-4 whitespace-nowrap font-semibold text-slate-700">-</td>
 
-            // Show modal
-            document.getElementById('reportDetailModal').classList.add('show');
-        }
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-100 inline-block">
+                            Pending
+                        </span>
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-slate-400 font-medium">-</span>
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${report.barangay_name ? 
+                            `<span class="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg text-xs font-semibold border border-purple-100 inline-block">${report.barangay_name}</span>` : 
+                            `<span class="text-slate-400 font-medium">-</span>`
+                        }
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap" id="barangay-action-${report.id}">
+                        <span class="text-slate-400 font-medium">-</span>
+                    </td>
+                    
+                    <td class="hidden">
+                        ${report.image_url ? `<a href="javascript:void(0)" class="view-link view-media" data-url="${report.image_url}" data-type="image" onclick="event.stopPropagation()">View</a>` : `<span>N/A</span>`}
+                    </td>
+                    <td class="hidden">
+                        ${report.video_url ? `<a href="javascript:void(0)" class="view-link view-media" data-url="${report.video_url}" data-type="video" onclick="event.stopPropagation()">View</a>` : `<span>N/A</span>`}
+                    </td>
+                    <td class="hidden">
+                        <button class="respond-btn" data-id="${report.id}" data-type="${disasterType}" data-description="${description}" data-location="${report.location || ''}" data-status="pending" onclick="event.stopPropagation()">
+                            📝 Respond
+                        </button>
+                    </td>
+                `;
 
-        function closeReportDetailModal(event) {
-            if (event && event.target !== event.currentTarget) return;
-            
-            // Stop any playing videos in the modal
-            const modalContent = document.getElementById('reportDetailContent');
-            const videos = modalContent.querySelectorAll('video');
-            videos.forEach(video => {
-                video.pause();
-                video.currentTime = 0;
-            });
-            
-            document.getElementById('reportDetailModal').classList.remove('show');
-        }
+                // 6. Insert the new row at the top of the table
+                tbody.insertBefore(tr, tbody.firstChild);
 
-        // Track if report modal was open before viewing image
-        let reportModalWasOpen = false;
-
-        function openImageFullscreen(imageUrl) {
-            // Remember that report modal was open
-            reportModalWasOpen = document.getElementById('reportDetailModal').classList.contains('show');
-            
-            // Hide report modal temporarily
-            if (reportModalWasOpen) {
-                document.getElementById('reportDetailModal').classList.remove('show');
-            }
-            
-            // Show image in media modal
-            showMedia(imageUrl, 'image');
-        }
-
-        // Override closeMediaModal to restore report modal
-        const originalCloseMediaModal = closeMediaModal;
-        closeMediaModal = function() {
-            originalCloseMediaModal();
-            
-            // Restore report modal if it was open
-            if (reportModalWasOpen) {
+                // 7. Remove the green highlight flash after 2 seconds
                 setTimeout(() => {
-                    document.getElementById('reportDetailModal').classList.add('show');
-                    reportModalWasOpen = false;
-                }, 100);
-            }
-        };
+                    tr.classList.remove('bg-emerald-50');
+                }, 2000);
+            };
 
-        function runAiPrediction(event, reportId) {
-            event.stopPropagation(); // Prevents the row click event if you have one
-            
-            const btn = document.getElementById(`ai-btn-${reportId}`);
-            const originalText = btn.innerText;
-            const url = "{{ route('admin.reports.run-ai', ':id') }}".replace(':id', reportId);
+            window.runAiPrediction = async function(event, reportId) {
+                // 1. Prevent row click event if the button is inside a clickable row
+                event.stopPropagation();
 
-            // UI Feedback: Disable and show loading
-            btn.disabled = true;
-            btn.innerText = 'Processing...';
-            btn.style.opacity = '0.7';
+                const btn = document.getElementById(`ai-btn-${reportId}`);
+                const originalText = btn.innerText;
 
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                // 2. Visual feedback
+                btn.disabled = true;
+                btn.innerText = 'Processing...';
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                try {
+                    // 3. Trigger the Laravel route
+                    const response = await fetch(`/reports/${reportId}/run-ai`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        btn.innerText = 'Queued!';
+                        console.log(`✅ AI process started for report ${reportId}`);
+                        
+                        // Optionally: Change the UI to show it's pending
+                        // e.g., update the text in the table cell
+                    } else {
+                        throw new Error('Failed to start AI process');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    btn.innerText = 'Error';
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }, 3000);
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                // Optional: Reload after a short delay to see results
-                setTimeout(() => location.reload(), 2000); 
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                btn.disabled = false;
-                btn.innerText = originalText;
-                alert('Failed to start AI processing.');
-            });
+            };
         }
-    </script>
-</body>
-</html>
+    });
+</script>
+
+
+
+@endpush

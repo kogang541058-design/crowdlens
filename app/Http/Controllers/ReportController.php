@@ -80,7 +80,12 @@ class ReportController extends Controller
 
         // Broadcast the event to admin channel
         \Log::info('Broadcasting ReportSubmitted event for report ID: ' . $report->id);
-        broadcast(new ReportSubmitted($report->load('user')))->toOthers();
+
+        // Development
+        broadcast(new ReportSubmitted($report->load('user')));
+
+        // Production
+        // broadcast(new ReportSubmitted($report->load('user')))->toOthers();
         \Log::info('Broadcast completed for report ID: ' . $report->id);
 
         return redirect()->back()->with('success', 'Report submitted successfully!');
@@ -218,5 +223,15 @@ class ReportController extends Controller
         }
         
         return null;
+    }
+
+    public function runPrediction(Report $report)
+    {
+        // Dispatch the job
+        \App\Jobs\ProcessPrediction::dispatch($report);
+
+        return response()->json([
+            'message' => 'AI Prediction process started in the background.'
+        ]);
     }
 }
